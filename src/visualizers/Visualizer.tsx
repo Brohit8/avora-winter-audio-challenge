@@ -1,8 +1,8 @@
 import { useRef, useEffect } from 'react'
 
 export interface VisualizerProps {
-  frequencyData: Uint8Array
-  timeDomainData: Uint8Array
+  frequencyData: React.RefObject<Uint8Array<ArrayBuffer>>
+  timeDomainData: React.RefObject<Uint8Array<ArrayBuffer>>
   isActive: boolean
 }
 
@@ -10,9 +10,12 @@ export interface VisualizerProps {
  * Visualizer - YOUR CANVAS FOR THE CHALLENGE
  *
  * Props provided:
- *   - frequencyData: Uint8Array of FFT frequency bins (0-255 values)
- *   - timeDomainData: Uint8Array of waveform samples (0-255 values)
+ *   - frequencyData: Ref to Uint8Array of FFT frequency bins (0-255 values)
+ *   - timeDomainData: Ref to Uint8Array of waveform samples (0-255 values)
  *   - isActive: boolean indicating if audio is streaming
+ *
+ * The data refs are updated in-place by the audio hook. This component
+ * runs its own animation loop to read the data and render.
  *
  * The example below draws a simple waveform line. Replace it with your own!
  */
@@ -29,12 +32,10 @@ export function Visualizer({ frequencyData, timeDomainData, isActive }: Visualiz
     const width = canvas.width
     const height = canvas.height
 
-    // Clear canvas
-    ctx.fillStyle = '#000'
-    ctx.fillRect(0, 0, width, height)
-
+    // Draw placeholder when not active
     if (!isActive) {
-      // Show placeholder when not active
+      ctx.fillStyle = '#000'
+      ctx.fillRect(0, 0, width, height)
       ctx.fillStyle = '#333'
       ctx.font = '16px monospace'
       ctx.textAlign = 'center'
@@ -42,33 +43,51 @@ export function Visualizer({ frequencyData, timeDomainData, isActive }: Visualiz
       return
     }
 
-    // === YOUR VISUALIZATION CODE GOES HERE ===
+    // Animation loop - runs independently of React renders
+    let frameId: number
 
-    // Example: Simple waveform line
-    ctx.beginPath()
-    ctx.strokeStyle = '#0f0'
-    ctx.lineWidth = 2
+    const draw = () => {
+      const timeData = timeDomainData.current
 
-    const sliceWidth = width / timeDomainData.length
-    let x = 0
+      // Clear canvas
+      ctx.fillStyle = '#000'
+      ctx.fillRect(0, 0, width, height)
 
-    for (let i = 0; i < timeDomainData.length; i++) {
-      const v = timeDomainData[i] / 255
-      const y = v * height
+      // === YOUR VISUALIZATION CODE GOES HERE ===
 
-      if (i === 0) {
-        ctx.moveTo(x, y)
-      } else {
-        ctx.lineTo(x, y)
+      // Example: Simple waveform line
+      ctx.beginPath()
+      ctx.strokeStyle = '#0f0'
+      ctx.lineWidth = 2
+
+      const sliceWidth = width / timeData.length
+      let x = 0
+
+      for (let i = 0; i < timeData.length; i++) {
+        const v = timeData[i] / 255
+        const y = v * height
+
+        if (i === 0) {
+          ctx.moveTo(x, y)
+        } else {
+          ctx.lineTo(x, y)
+        }
+        x += sliceWidth
       }
-      x += sliceWidth
+
+      ctx.stroke()
+
+      // === END VISUALIZATION CODE ===
+
+      frameId = requestAnimationFrame(draw)
     }
 
-    ctx.stroke()
+    draw()
 
-    // === END VISUALIZATION CODE ===
-
-  }, [frequencyData, timeDomainData, isActive])
+    return () => {
+      cancelAnimationFrame(frameId)
+    }
+  }, [isActive, frequencyData, timeDomainData])
 
   return (
     <canvas
