@@ -1,16 +1,56 @@
-# React + Vite
+# Waveform Visualization Challenge
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Create your own audio waveform visualization using real-time microphone input.
 
-Currently, two official plugins are available:
+## Quick Start
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+```bash
+npm install
+npm run dev
+```
 
-## React Compiler
+Open http://localhost:5173 and allow microphone access when prompted.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## The Challenge
 
-## Expanding the ESLint configuration
+Edit `src/visualizers/Visualizer.jsx` to create your own visualization.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+You receive three props:
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `frequencyData` | `Uint8Array` | FFT frequency bins (0-255 values) |
+| `timeDomainData` | `Uint8Array` | Raw waveform samples (0-255 values) |
+| `isActive` | `boolean` | Whether audio is streaming |
+
+## Example
+
+The default visualizer draws a simple waveform line:
+
+```jsx
+// Draw frequency bars instead
+for (let i = 0; i < frequencyData.length; i++) {
+  const barHeight = (frequencyData[i] / 255) * height
+  ctx.fillStyle = `hsl(${i}, 100%, 50%)`
+  ctx.fillRect(i * 3, height - barHeight, 2, barHeight)
+}
+```
+
+## Project Structure
+
+```
+src/
+├── audio/
+│   └── useAudio.js      # Audio pipeline (do not modify)
+├── visualizers/
+│   └── Visualizer.jsx   # YOUR CODE GOES HERE
+├── App.jsx
+└── App.css
+```
+
+## Tips
+
+- `frequencyData` is great for spectrum/bar visualizations
+- `timeDomainData` is great for oscilloscope/waveform visualizations
+- Canvas 2D is provided, but you can use WebGL, SVG, or any renderer
+- The data updates at ~60fps via requestAnimationFrame
