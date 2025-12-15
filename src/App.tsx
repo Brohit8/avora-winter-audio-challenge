@@ -6,6 +6,12 @@ import './App.css'
 const CANVAS_WIDTH = 640
 const CANVAS_HEIGHT = 480
 
+/**
+ * Background color for the visualizer page.
+ * Change this to customize your submission's background.
+ */
+const BACKGROUND_COLOR = '#000'
+
 const FFT_SIZES = [32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768]
 
 function App() {
@@ -52,7 +58,7 @@ function App() {
   }
 
   return (
-    <div className="app">
+    <div className="app" style={{ backgroundColor: BACKGROUND_COLOR }}>
       <div className="visualizer-container" style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT }}>
         <Visualizer
           frequencyData={frequencyData}
