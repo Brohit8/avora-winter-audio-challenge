@@ -17,16 +17,14 @@ export interface VisualizerProps {
  *   - isActive: boolean indicating if audio is streaming
  *   - width: Canvas width (fixed, do not override)
  *   - height: Canvas height (fixed, do not override)
- *
- * The data refs are updated in-place by the audio hook. This component
- * runs its own animation loop to read the data and render.
- *
- * NOTE: Canvas dimensions are fixed at 320x240 (4:3) for side-by-side comparison.
- * Use the width/height props for your drawing calculations.
- *
- * The example below draws a simple waveform line. Replace it with your own!
  */
-export function Visualizer({ frequencyData, timeDomainData, isActive, width, height }: VisualizerProps) {
+export function Visualizer({
+  frequencyData,
+  timeDomainData,
+  isActive,
+  width,
+  height,
+}: VisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -36,97 +34,96 @@ export function Visualizer({ frequencyData, timeDomainData, isActive, width, hei
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
+    const font = '12px monospace'
+    const padding = 8
+    const controlsHeight = 120 // Space reserved for controls overlay
+    const vizHeight = height - controlsHeight
+    const halfVizHeight = Math.floor(vizHeight / 2)
+
+    // Helper to draw Unix-style box
+    const drawBox = (x: number, y: number, w: number, h: number, title?: string) => {
+      ctx.strokeStyle = '#444'
+      ctx.lineWidth = 1
+      ctx.strokeRect(x + 0.5, y + 0.5, w, h)
+      if (title) {
+        ctx.fillStyle = '#000'
+        ctx.font = font
+        const titleWidth = ctx.measureText(` ${title} `).width
+        ctx.fillRect(x + 8, y - 6, titleWidth, 12)
+        ctx.fillStyle = '#666'
+        ctx.fillText(` ${title} `, x + 8, y + 4)
+      }
+    }
+
     // Draw placeholder when not active
     if (!isActive) {
       ctx.fillStyle = '#000'
       ctx.fillRect(0, 0, width, height)
-      ctx.fillStyle = '#333'
-      ctx.font = '16px monospace'
+      ctx.fillStyle = '#0f0'
+      ctx.font = font
       ctx.textAlign = 'center'
-      ctx.fillText('Waiting for microphone...', width / 2, height / 2)
+      ctx.fillText('> awaiting microphone input...', width / 2, height / 2)
+      ctx.textAlign = 'left'
       return
     }
 
-    // Animation loop - runs independently of React renders
     let frameId: number
 
     const draw = () => {
       const timeData = timeDomainData.current
       const freqData = frequencyData.current
 
-      // Clear canvas
+      // Clear
       ctx.fillStyle = '#000'
       ctx.fillRect(0, 0, width, height)
-
-      // === YOUR VISUALIZATION CODE GOES HERE ===
-
-      const halfHeight = height / 2
-      const labelPadding = 6
-      const labelFontSize = 10
-      const horizontalPadding = 8
-      const drawWidth = width - horizontalPadding * 2
-
-      // Divider line
-      ctx.strokeStyle = '#333'
-      ctx.lineWidth = 1
-      ctx.beginPath()
-      ctx.moveTo(0, halfHeight)
-      ctx.lineTo(width, halfHeight)
-      ctx.stroke()
-
-      // Top half: Waveform
-      ctx.fillStyle = '#666'
-      ctx.font = `${labelFontSize}px monospace`
+      ctx.font = font
       ctx.textAlign = 'left'
-      ctx.fillText('Waveform', labelPadding, labelFontSize + labelPadding)
+
+      // === WAVEFORM SECTION ===
+      const waveY = padding
+      const waveH = halfVizHeight - padding * 1.5
+      drawBox(padding, waveY, width - padding * 2, waveH, 'WAVEFORM')
 
       ctx.beginPath()
       ctx.strokeStyle = '#0f0'
-      ctx.lineWidth = 2
+      ctx.lineWidth = 1
 
-      const sliceWidth = drawWidth / timeData.length
-      let x = horizontalPadding
+      const waveDrawW = width - padding * 4
+      const sliceWidth = waveDrawW / timeData.length
+      let x = padding * 2
 
       for (let i = 0; i < timeData.length; i++) {
         const normalized = (timeData[i] - 128) / 128
-        const y = halfHeight / 2 - normalized * (halfHeight / 2)
+        const y = waveY + waveH / 2 - normalized * (waveH / 2 - 10)
 
-        if (i === 0) {
-          ctx.moveTo(x, y)
-        } else {
-          ctx.lineTo(x, y)
-        }
+        if (i === 0) ctx.moveTo(x, y)
+        else ctx.lineTo(x, y)
         x += sliceWidth
       }
       ctx.stroke()
 
-      // Bottom half: Frequency bars (centered/mirrored)
-      ctx.fillStyle = '#666'
-      ctx.font = `${labelFontSize}px monospace`
-      ctx.textAlign = 'left'
-      ctx.fillText('Frequency', labelPadding, halfHeight + labelFontSize + labelPadding)
+      // === FREQUENCY SECTION ===
+      const freqY = halfVizHeight + padding / 2
+      const freqH = halfVizHeight - padding * 1.5
+      drawBox(padding, freqY, width - padding * 2, freqH, 'FREQUENCY')
 
       const barCount = 64
-      const barWidth = drawWidth / barCount
-      const barGap = 1
-      const freqCenterY = halfHeight + halfHeight / 2
+      const barWidth = waveDrawW / barCount
+      const freqCenterY = freqY + freqH / 2
 
+      ctx.fillStyle = '#0f0'
       for (let i = 0; i < barCount; i++) {
         const freqIndex = Math.floor(i * freqData.length / barCount)
         const value = freqData[freqIndex] / 255
-        const barHeight = value * (halfHeight / 2)
+        const barHeight = value * (freqH / 2 - 10)
 
-        ctx.fillStyle = '#0f0'
-        // Draw bar extending both up and down from center
         ctx.fillRect(
-          horizontalPadding + i * barWidth + barGap / 2,
+          padding * 2 + i * barWidth + 1,
           freqCenterY - barHeight,
-          barWidth - barGap,
+          barWidth - 2,
           barHeight * 2
         )
       }
-
-      // === END VISUALIZATION CODE ===
 
       frameId = requestAnimationFrame(draw)
     }

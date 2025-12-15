@@ -3,14 +3,252 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 1rem;
+  background: #000;
+  font-family: monospace;
 }
 
-main {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.visualizer-container {
+  position: relative;
+  border: 1px solid #333;
+  box-sizing: content-box;
 }
 
 canvas {
-  border: 1px solid #222;
+  display: block;
+}
+
+/* Controls overlay */
+.controls-overlay {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.controls-overlay fieldset {
+  flex: 1;
+  border: 1px solid #444;
+  padding: 8px 12px;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.85);
+}
+
+.controls-overlay legend {
+  color: #666;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  padding: 0 4px;
+}
+
+.controls-overlay label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.controls-overlay label:last-child {
+  margin-bottom: 0;
+}
+
+.controls-overlay .label {
+  color: #888;
+  min-width: 60px;
+  font-size: 10px;
+}
+
+.controls-overlay .value {
+  color: #0f0;
+  min-width: 50px;
+  text-align: right;
+  font-size: 10px;
+}
+
+/* Select */
+.controls-overlay select {
+  background: #111;
+  color: #0f0;
+  border: 1px solid #333;
+  padding: 1px 4px;
+  font-family: monospace;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.controls-overlay select:focus {
+  outline: 1px solid #0f0;
+  border-color: #0f0;
+}
+
+/* Range slider */
+.controls-overlay input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: #222;
+  height: 3px;
+  border-radius: 2px;
+  cursor: pointer;
+  flex: 1;
+}
+
+.controls-overlay input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  background: #0f0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.controls-overlay input[type="range"]::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  background: #0f0;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.controls-overlay input[type="range"]:focus {
+  outline: none;
+}
+
+/* Dual range slider */
+.dual-range {
+  position: relative;
+  flex: 1;
+  height: 10px;
+}
+
+.dual-range .track {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 3px;
+  margin-top: -1.5px;
+  background: #222;
+  border-radius: 2px;
+}
+
+.dual-range .track-fill {
+  position: absolute;
+  top: 50%;
+  height: 3px;
+  margin-top: -1.5px;
+  background: #0f0;
+  border-radius: 2px;
+}
+
+.dual-range input[type="range"] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.dual-range input[type="range"]::-webkit-slider-runnable-track {
+  background: transparent;
+  border: none;
+}
+
+.dual-range input[type="range"]::-moz-range-track {
+  background: transparent;
+  border: none;
+}
+
+.dual-range input[type="range"]::-moz-range-progress {
+  background: transparent;
+}
+
+.dual-range input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: auto;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  margin-top: -2px;
+}
+
+.dual-range input[type="range"]::-moz-range-thumb {
+  pointer-events: auto;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+/* Min thumb - darker green */
+.dual-range input[type="range"]:first-child::-webkit-slider-thumb {
+  background: #090;
+}
+
+.dual-range input[type="range"]:first-child::-moz-range-thumb {
+  background: #090;
+}
+
+/* Max thumb - bright green */
+.dual-range input[type="range"]:last-child::-webkit-slider-thumb {
+  background: #0f0;
+}
+
+.dual-range input[type="range"]:last-child::-moz-range-thumb {
+  background: #0f0;
+}
+
+/* Checkbox */
+.controls-overlay label.checkbox {
+  cursor: pointer;
+}
+
+.controls-overlay label.checkbox input {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border: 1px solid #444;
+  background: #111;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.controls-overlay label.checkbox input:checked {
+  background: #111;
+  border-color: #0f0;
+}
+
+.controls-overlay label.checkbox input:checked::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  background: #0f0;
+}
+
+.controls-overlay label.checkbox span {
+  color: #888;
+  font-size: 10px;
+}
+
+.controls-overlay label.checkbox:hover span {
+  color: #aaa;
 }
