@@ -9,9 +9,9 @@ export interface UseAudioOptions {
 
 export interface UseAudioReturn {
   /** Ref containing FFT frequency data (0-255 values). Updated in-place every frame. */
-  frequencyData: React.RefObject<Uint8Array<ArrayBuffer>>
+  frequencyData: React.RefObject<Uint8Array>
   /** Ref containing time-domain waveform data (0-255 values). Updated in-place every frame. */
-  timeDomainData: React.RefObject<Uint8Array<ArrayBuffer>>
+  timeDomainData: React.RefObject<Uint8Array>
   /** Whether the microphone is active and streaming */
   isActive: boolean
   /** Error message if mic permission denied or unavailable */
@@ -22,16 +22,16 @@ export interface UseAudioReturn {
   stop: () => void
 }
 
-const DEFAULT_ANALYSER_OPTIONS: AnalyserOptions = {
+const DEFAULT_ANALYSER_OPTIONS = {
   fftSize: 2048,
   smoothingTimeConstant: 0.8,
-}
+} satisfies AnalyserOptions
 
-const DEFAULT_AUDIO_OPTIONS: MediaTrackConstraints = {
+const DEFAULT_AUDIO_OPTIONS = {
   echoCancellation: false,
   noiseSuppression: false,
   autoGainControl: false,
-}
+} satisfies MediaTrackConstraints
 
 /**
  * useAudio - A stable hook for accessing microphone audio data
