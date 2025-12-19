@@ -35,23 +35,26 @@ export function Visualizer({
     if (!ctx) return
 
     const font = '12px monospace'
-    const padding = 8
+    const padding = 12
+    const borderRadius = 8
     const controlsHeight = 120 // Space reserved for controls overlay
     const vizHeight = height - controlsHeight
     const halfVizHeight = Math.floor(vizHeight / 2)
 
-    // Helper to draw Unix-style box
+    // Helper to draw rounded box
     const drawBox = (x: number, y: number, w: number, h: number, title?: string) => {
-      ctx.strokeStyle = '#444'
+      ctx.strokeStyle = '#525252'
       ctx.lineWidth = 1
-      ctx.strokeRect(x + 0.5, y + 0.5, w, h)
+      ctx.beginPath()
+      ctx.roundRect(x + 0.5, y + 0.5, w, h, borderRadius)
+      ctx.stroke()
       if (title) {
         ctx.fillStyle = '#000'
         ctx.font = font
         const titleWidth = ctx.measureText(` ${title} `).width
-        ctx.fillRect(x + 8, y - 6, titleWidth, 12)
-        ctx.fillStyle = '#666'
-        ctx.fillText(` ${title} `, x + 8, y + 4)
+        ctx.fillRect(x + 12, y - 6, titleWidth, 12)
+        ctx.fillStyle = '#a3a3a3'
+        ctx.fillText(` ${title} `, x + 12, y + 4)
       }
     }
 
@@ -59,7 +62,7 @@ export function Visualizer({
     if (!isActive) {
       ctx.fillStyle = '#000'
       ctx.fillRect(0, 0, width, height)
-      ctx.fillStyle = '#0f0'
+      ctx.fillStyle = '#a3a3a3'
       ctx.font = font
       ctx.textAlign = 'center'
       ctx.fillText('> awaiting microphone input...', width / 2, height / 2)
@@ -85,8 +88,8 @@ export function Visualizer({
       drawBox(padding, waveY, width - padding * 2, waveH, 'WAVEFORM')
 
       ctx.beginPath()
-      ctx.strokeStyle = '#0f0'
-      ctx.lineWidth = 1
+      ctx.strokeStyle = '#ffffff'
+      ctx.lineWidth = 3
 
       const waveDrawW = width - padding * 4
       const sliceWidth = waveDrawW / timeData.length
@@ -111,7 +114,7 @@ export function Visualizer({
       const barWidth = waveDrawW / barCount
       const freqCenterY = freqY + freqH / 2
 
-      ctx.fillStyle = '#0f0'
+      ctx.fillStyle = '#ffffff'
       for (let i = 0; i < barCount; i++) {
         const freqIndex = Math.floor(i * freqData.length / barCount)
         const value = freqData[freqIndex] / 255
