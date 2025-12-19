@@ -9,6 +9,7 @@
 
 .visualizer-container {
   position: relative;
+  transform: scale(0.96);
 }
 
 canvas {
