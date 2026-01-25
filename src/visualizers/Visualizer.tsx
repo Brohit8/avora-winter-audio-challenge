@@ -11,9 +11,17 @@ export interface VisualizerProps {
 /**
  * Visualizer - YOUR CANVAS FOR THE CHALLENGE
  *
+ * Audio Pipeline (handled by useAudio):
+ *   The useAudio hook captures microphone input via the Web Audio API. It creates
+ *   an AnalyserNode that performs real-time FFT (Fast Fourier Transform) analysis,
+ *   breaking the audio signal into frequency components. The data refs are updated
+ *   every frame (~60fps) via requestAnimationFrame—no React re-renders involved.
+ *
  * Props provided:
- *   - frequencyData: Ref to Uint8Array of FFT frequency bins (0-255 values)
- *   - timeDomainData: Ref to Uint8Array of waveform samples (0-255 values)
+ *   - frequencyData: Ref to Uint8Array of 1024 FFT frequency bins (0-255 values).
+ *       Index 0 is the lowest frequency (DC), higher indices = higher frequencies.
+ *   - timeDomainData: Ref to Uint8Array of 2048 waveform samples (0-255 values).
+ *       Represents the raw audio signal; 128 is silence, 0/255 are extremes.
  *   - isActive: boolean indicating if audio is streaming
  *   - width: Canvas width (fixed, do not override)
  *   - height: Canvas height (fixed, do not override)

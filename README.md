@@ -1,6 +1,6 @@
-# Avora Winter Waveform Challenge 2026
+# Avora Winter Audio Challenge 2026
 
-Create your own audio waveform visualization using real-time microphone input.
+Create your own novel audio visualization using real-time microphone input.
 
 ## Quick Start
 
@@ -13,28 +13,17 @@ Open http://localhost:5173 and allow microphone access when prompted.
 
 ## The Challenge
 
-Edit `src/visualizers/Visualizer.tsx` to create your own visualization.
+Edit `src/visualizers/Visualizer.tsx` to create your own visualization. You have been given a default starter template that shows audio visualized in the frequency and time domains.
 
-You receive three props:
+## Audio Pipeline
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `frequencyData` | `Uint8Array` | FFT frequency bins (0-255 values) |
-| `timeDomainData` | `Uint8Array` | Raw waveform samples (0-255 values) |
-| `isActive` | `boolean` | Whether audio is streaming |
+The `useAudio` hook captures microphone input.
 
-## Example
+From the hook, you will receive:
+- **frequencyData** — 1024 FFT frequency bins from low to high.
+- **timeDomainData** — 2048 raw waveform samples. A value of 128 is silence, and 0 and 255 are the lowest and highest values respectively.
 
-The default visualizer draws a simple waveform line:
-
-```jsx
-// Draw frequency bars instead
-for (let i = 0; i < frequencyData.length; i++) {
-  const barHeight = (frequencyData[i] / 255) * height
-  ctx.fillStyle = `hsl(${i}, 100%, 50%)`
-  ctx.fillRect(i * 3, height - barHeight, 2, barHeight)
-}
-```
+You SHOULD NOT update useAudio, and should instead focus on using its return values for your visualization.
 
 ## Project Structure
 
@@ -45,12 +34,17 @@ src/
 ├── visualizers/
 │   └── Visualizer.tsx   # YOUR CODE GOES HERE
 ├── App.tsx
-└── App.css
+├── App.css
+├── index.css
+└── main.tsx
 ```
 
-## Tips
+## Submissions
 
-- `frequencyData` is great for spectrum/bar visualizations
-- `timeDomainData` is great for oscilloscope/waveform visualizations
-- Canvas 2D is provided, but you can use WebGL, SVG, or any renderer
-- The data updates at ~60fps via requestAnimationFrame
+Fork this repo and get nerdy with a visualization that you find super cool.
+
+When you're ready, deploy your solution and send the URL + link to your submission's github repo to careers@getavora.ai
+
+We evaluate solutions on craft and novelty. You may use any AI tools that you like in this process.
+
+Have fun!
