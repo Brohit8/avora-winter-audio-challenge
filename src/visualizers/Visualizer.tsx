@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from 'react'
+import * as Slider from '@radix-ui/react-slider'
 
 export interface VisualizerProps {
   frequencyData: React.RefObject<Uint8Array<ArrayBuffer>>
@@ -38,6 +39,15 @@ export function Visualizer({
 }: VisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [screen, setScreen] = useState<Screen>('setup')
+  // Frequency ranges for each boat (FFT bin indices, 0-1023)
+  const [boat1Range, setBoat1Range] = useState({ start: 0, end: 100 })
+  const [boat2Range, setBoat2Range] = useState({ start: 150, end: 300 })
+  const [draggingThumb, setDraggingThumb] = useState<'start' | 'end' | null>(null)
+  // Stores the "other" thumb's position when we start dragging
+  const dragAnchorRef = useRef<number>(0)
+
+
+
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -111,10 +121,209 @@ export function Visualizer({
           width: '100%',
           height: '100%',
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          gap: '20px',
         }}>
+          {/* Red boat controls */}
+          <div style={{ color: '#ef4444', textAlign: 'center' }}>
+            <div style={{ marginBottom: '8px' }}>
+              Red Boat: {boat1Range.start} - {boat1Range.end}
+            </div>
+            <Slider.Root
+              min={0}
+              max={1023}
+              step={1}
+              value={[boat1Range.start, boat1Range.end]}
+              onValueChange={([val1, val2]) => {
+                if (draggingThumb === 'start') {
+                  const anchor = dragAnchorRef.current
+                  // Figure out which value is our dragged position
+                  let draggedPos: number
+                  if (val2 === anchor) {
+                    // Haven't crossed yet - val1 is our position
+                    draggedPos = val1
+                  } else if (val1 >= anchor) {
+                    // Crossed and pushing - val2 is our position
+                    draggedPos = val2
+                  } else {
+                    draggedPos = val1
+                  }
+                  const newEnd = Math.max(draggedPos, anchor)
+                  setBoat1Range({ start: draggedPos, end: newEnd })
+                  dragAnchorRef.current = newEnd
+                } else if (draggingThumb === 'end') {
+                  const anchor = dragAnchorRef.current
+                  let draggedPos: number
+                  if (val1 === anchor) {
+                    // Haven't crossed yet - val2 is our position
+                    draggedPos = val2
+                  } else if (val2 <= anchor) {
+                    // Crossed and pushing - val1 is our position
+                    draggedPos = val1
+                  } else {
+                    draggedPos = val2
+                  }
+                  const newStart = Math.min(draggedPos, anchor)
+                  setBoat1Range({ start: newStart, end: draggedPos })
+                  dragAnchorRef.current = newStart
+                } else {
+                  setBoat1Range({ start: val1, end: val2 })
+                }
+              }}
+              onValueCommit={() => setDraggingThumb(null)}
+              style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                width: '200px',
+                height: '20px',
+              }}
+            >
+              <Slider.Track style={{
+                backgroundColor: '#333',
+                position: 'relative',
+                flexGrow: 1,
+                borderRadius: '9999px',
+                height: '4px',
+              }}>
+                <Slider.Range style={{
+                  position: 'absolute',
+                  backgroundColor: '#ef4444',
+                  borderRadius: '9999px',
+                  height: '100%',
+                }} />
+              </Slider.Track>
+              <Slider.Thumb
+                onPointerDown={() => {
+                  setDraggingThumb('start')
+                  dragAnchorRef.current = boat1Range.end
+                }}
+                style={{
+                  display: 'block',
+                  width: '16px',
+                  height: '16px',
+                  backgroundColor: 'white',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                }}
+              />
+              <Slider.Thumb
+                onPointerDown={() => {
+                  setDraggingThumb('end')
+                  dragAnchorRef.current = boat1Range.start
+                }}
+                style={{
+                  display: 'block',
+                  width: '16px',
+                  height: '16px',
+                  backgroundColor: 'white',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                }}
+              />
+            </Slider.Root>
+          </div>
+
+
+
+          {/* Blue boat controls */}
+          <div style={{ color: '#3b82f6', textAlign: 'center' }}>
+            <div style={{ marginBottom: '8px' }}>
+              Blue Boat: {boat2Range.start} - {boat2Range.end}
+            </div>
+            <Slider.Root
+              min={0}
+              max={1023}
+              step={1}
+              value={[boat2Range.start, boat2Range.end]}
+              onValueChange={([val1, val2]) => {
+                if (draggingThumb === 'start') {
+                  const anchor = dragAnchorRef.current
+                  let draggedPos: number
+                  if (val2 === anchor) {
+                    draggedPos = val1
+                  } else if (val1 >= anchor) {
+                    draggedPos = val2
+                  } else {
+                    draggedPos = val1
+                  }
+                  const newEnd = Math.max(draggedPos, anchor)
+                  setBoat2Range({ start: draggedPos, end: newEnd })
+                  dragAnchorRef.current = newEnd
+                } else if (draggingThumb === 'end') {
+                  const anchor = dragAnchorRef.current
+                  let draggedPos: number
+                  if (val1 === anchor) {
+                    draggedPos = val2
+                  } else if (val2 <= anchor) {
+                    draggedPos = val1
+                  } else {
+                    draggedPos = val2
+                  }
+                  const newStart = Math.min(draggedPos, anchor)
+                  setBoat2Range({ start: newStart, end: draggedPos })
+                  dragAnchorRef.current = newStart
+                } else {
+                  setBoat2Range({ start: val1, end: val2 })
+                }
+              }}
+              onValueCommit={() => setDraggingThumb(null)}
+              style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                width: '200px',
+                height: '20px',
+              }}
+            >
+              <Slider.Track style={{
+                backgroundColor: '#333',
+                position: 'relative',
+                flexGrow: 1,
+                borderRadius: '9999px',
+                height: '4px',
+              }}>
+                <Slider.Range style={{
+                  position: 'absolute',
+                  backgroundColor: '#3b82f6',
+                  borderRadius: '9999px',
+                  height: '100%',
+                }} />
+              </Slider.Track>
+              <Slider.Thumb
+                onPointerDown={() => {
+                  setDraggingThumb('start')
+                  dragAnchorRef.current = boat2Range.end
+                }}
+                style={{
+                  display: 'block',
+                  width: '16px',
+                  height: '16px',
+                  backgroundColor: 'white',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                }}
+              />
+              <Slider.Thumb
+                onPointerDown={() => {
+                  setDraggingThumb('end')
+                  dragAnchorRef.current = boat2Range.start
+                }}
+                style={{
+                  display: 'block',
+                  width: '16px',
+                  height: '16px',
+                  backgroundColor: 'white',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                }}
+              />
+            </Slider.Root>
+          </div>
+
           <button onClick={() => setScreen('race')}>
             Start Race
           </button>
