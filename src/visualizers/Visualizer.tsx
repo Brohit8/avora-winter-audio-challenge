@@ -42,108 +42,51 @@ export function Visualizer({
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const font = '12px monospace'
-    const padding = 12
-    const borderRadius = 8
-    const controlsHeight = 120 // Space reserved for controls overlay
-    const vizHeight = height - controlsHeight
-    const halfVizHeight = Math.floor(vizHeight / 2)
+    // Layout constants
+    const GUTTER_HEIGHT = 60
+    const GUTTER_GAP = 40
+    const BOAT_RADIUS = 15
+    const PADDING = 50
 
-    // Helper to draw rounded box
-    const drawBox = (x: number, y: number, w: number, h: number, title?: string) => {
-      ctx.strokeStyle = '#525252'
-      ctx.lineWidth = 1
-      ctx.beginPath()
-      ctx.roundRect(x + 0.5, y + 0.5, w, h, borderRadius)
-      ctx.stroke()
-      if (title) {
-        ctx.fillStyle = '#000'
-        ctx.font = font
-        const titleWidth = ctx.measureText(` ${title} `).width
-        ctx.fillRect(x + 12, y - 6, titleWidth, 12)
-        ctx.fillStyle = '#a3a3a3'
-        ctx.fillText(` ${title} `, x + 12, y + 4)
-      }
-    }
+    // Calculate positions based on canvas size
+    const gutterWidth = width - PADDING * 2
+    const centerY = height / 2
+    const gutter1Y = centerY - GUTTER_GAP / 2 - GUTTER_HEIGHT
+    const gutter2Y = centerY + GUTTER_GAP / 2
+    const startX = PADDING + BOAT_RADIUS + 10
 
-    // Draw placeholder when not active
-    if (!isActive) {
-      ctx.fillStyle = '#000'
-      ctx.fillRect(0, 0, width, height)
-      ctx.fillStyle = '#a3a3a3'
-      ctx.font = font
-      ctx.textAlign = 'center'
-      ctx.fillText('> awaiting microphone input...', width / 2, height / 2)
-      ctx.textAlign = 'left'
-      return
-    }
+    // Clear canvas with black background
+    ctx.fillStyle = '#000000'
+    ctx.fillRect(0, 0, width, height)
 
-    let frameId: number
+    // Draw gutters (water channels)
+    ctx.fillStyle = '#1e3a5f'
+    ctx.fillRect(PADDING, gutter1Y, gutterWidth, GUTTER_HEIGHT)
+    ctx.fillRect(PADDING, gutter2Y, gutterWidth, GUTTER_HEIGHT)
 
-    const draw = () => {
-      const timeData = timeDomainData.current
-      const freqData = frequencyData.current
+    // Draw red boat (top gutter)
+    ctx.fillStyle = '#ef4444'
+    ctx.beginPath()
+    ctx.arc(startX, gutter1Y + GUTTER_HEIGHT / 2, BOAT_RADIUS, 0, Math.PI * 2)
+    ctx.fill()
 
-      // Clear
-      ctx.fillStyle = '#000'
-      ctx.fillRect(0, 0, width, height)
-      ctx.font = font
-      ctx.textAlign = 'left'
+    // Draw blue boat (bottom gutter)
+    ctx.fillStyle = '#3b82f6'
+    ctx.beginPath()
+    ctx.arc(startX, gutter2Y + GUTTER_HEIGHT / 2, BOAT_RADIUS, 0, Math.PI * 2)
+    ctx.fill()
 
-      // === WAVEFORM SECTION ===
-      const waveY = padding
-      const waveH = halfVizHeight - padding * 1.5
-      drawBox(padding, waveY, width - padding * 2, waveH, 'WAVEFORM')
+    // Draw finish line
+    ctx.strokeStyle = '#ffffff'
+    ctx.lineWidth = 3
+    ctx.setLineDash([10, 5])
+    ctx.beginPath()
+    ctx.moveTo(width - PADDING - 20, gutter1Y - 10)
+    ctx.lineTo(width - PADDING - 20, gutter2Y + GUTTER_HEIGHT + 10)
+    ctx.stroke()
+    ctx.setLineDash([])
 
-      ctx.beginPath()
-      ctx.strokeStyle = '#ffffff'
-      ctx.lineWidth = 3
 
-      const waveDrawW = width - padding * 4
-      const sliceWidth = waveDrawW / timeData.length
-      let x = padding * 2
-
-      for (let i = 0; i < timeData.length; i++) {
-        const normalized = (timeData[i] - 128) / 128
-        const y = waveY + waveH / 2 - normalized * (waveH / 2 - 10)
-
-        if (i === 0) ctx.moveTo(x, y)
-        else ctx.lineTo(x, y)
-        x += sliceWidth
-      }
-      ctx.stroke()
-
-      // === FREQUENCY SECTION ===
-      const freqY = halfVizHeight + padding / 2
-      const freqH = halfVizHeight - padding * 1.5
-      drawBox(padding, freqY, width - padding * 2, freqH, 'FREQUENCY')
-
-      const barCount = 64
-      const barWidth = waveDrawW / barCount
-      const freqCenterY = freqY + freqH / 2
-
-      ctx.fillStyle = '#ffffff'
-      for (let i = 0; i < barCount; i++) {
-        const freqIndex = Math.floor(i * freqData.length / barCount)
-        const value = freqData[freqIndex] / 255
-        const barHeight = value * (freqH / 2 - 10)
-
-        ctx.fillRect(
-          padding * 2 + i * barWidth + 1,
-          freqCenterY - barHeight,
-          barWidth - 2,
-          barHeight * 2
-        )
-      }
-
-      frameId = requestAnimationFrame(draw)
-    }
-
-    draw()
-
-    return () => {
-      cancelAnimationFrame(frameId)
-    }
   }, [isActive, frequencyData, timeDomainData, width, height])
 
   return (
