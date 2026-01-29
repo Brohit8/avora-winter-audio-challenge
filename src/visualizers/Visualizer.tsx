@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 
 export interface VisualizerProps {
   frequencyData: React.RefObject<Uint8Array<ArrayBuffer>>
@@ -7,6 +7,9 @@ export interface VisualizerProps {
   width: number
   height: number
 }
+// Screen states for our game
+type Screen = 'setup' | 'race' | 'winner'
+
 
 /**
  * Visualizer - YOUR CANVAS FOR THE CHALLENGE
@@ -34,6 +37,7 @@ export function Visualizer({
   height,
 }: VisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [screen, setScreen] = useState<Screen>('setup')
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -90,11 +94,54 @@ export function Visualizer({
   }, [isActive, frequencyData, timeDomainData, width, height])
 
   return (
-    <canvas
-      ref={canvasRef}
-      width={width}
-      height={height}
-      style={{ display: 'block' }}
-    />
+    <div style={{ position: 'relative', width, height }}>
+      <canvas
+        ref={canvasRef}
+        width={width}
+        height={height}
+        style={{ display: 'block' }}
+      />
+
+      {/* Setup screen overlay */}
+      {screen === 'setup' && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        }}>
+          <button onClick={() => setScreen('race')}>
+            Start Race
+          </button>
+        </div>
+      )}
+
+      {/* Winner screen overlay */}
+      {screen === 'winner' && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        }}>
+          <h2 style={{ color: 'white' }}>Winner!</h2>
+          <button onClick={() => setScreen('setup')}>
+            Race Again
+          </button>
+        </div>
+      )}
+    </div>
   )
+
 }
