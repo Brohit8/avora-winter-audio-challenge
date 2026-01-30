@@ -1,6 +1,22 @@
 import { useRef, useEffect, useState } from 'react'
 import * as Slider from '@radix-ui/react-slider'
 import type { VisualizerProps, Screen, FrequencyRange } from './types'
+import {
+  NOISE_THRESHOLD,
+  MAX_AUDIO_VALUE,
+  HZ_PER_BIN,
+  MAX_SLIDER_BIN,
+  DEFAULT_RED_RANGE,
+  DEFAULT_BLUE_RANGE,
+  BASE_SPEED_MULTIPLIER,
+  WHISTLE_BOOST,
+  SINGING_BOOST,
+  GUTTER_HEIGHT,
+  GUTTER_GAP,
+  BOAT_RADIUS,
+  CANVAS_PADDING,
+  COLORS,
+} from './constants'
 
 
 /**
@@ -32,8 +48,8 @@ export function Visualizer({
   const [screen, setScreen] = useState<Screen>('setup')
   const [winner, setWinner] = useState<'red' | 'blue' | null>(null)
   // Frequency ranges for each boat (FFT bin indices)
-  const [boat1Range, setBoat1Range] = useState<FrequencyRange>({ start: 56, end: 200 })
-  const [boat2Range, setBoat2Range] = useState<FrequencyRange>({ start: 0, end: 56 })
+  const [boat1Range, setBoat1Range] = useState<FrequencyRange>(DEFAULT_RED_RANGE)
+  const [boat2Range, setBoat2Range] = useState<FrequencyRange>(DEFAULT_BLUE_RANGE)
   const [draggingThumb, setDraggingThumb] = useState<'start' | 'end' | null>(null)
   // Stores the "other" thumb's position when we start dragging
   const dragAnchorRef = useRef<number>(0)
@@ -41,10 +57,6 @@ export function Visualizer({
   const boat1PosRef = useRef<number>(0)
   const boat2PosRef = useRef<number>(0)
 
-  // Audio processing constants
-  const NOISE_THRESHOLD = 120    // Ignore values below this (0-255 scale)
-  const MAX_SLIDER_BIN = 200     // ~4300 Hz - covers bass, voice, sax, whistling
-  const HZ_PER_BIN = 21.5        // Approx Hz per FFT bin (44100 / 2048)
 
   // Get descriptive label for a single frequency (standard audio production terms)
   function getFrequencyLabel(hz: number): string {
@@ -64,7 +76,7 @@ export function Visualizer({
       const value = data[i] > NOISE_THRESHOLD ? data[i] - NOISE_THRESHOLD : 0
       sum += value
     }
-    return sum / (endBin - startBin) / (255 - NOISE_THRESHOLD)
+    return sum / (endBin - startBin) / (MAX_AUDIO_VALUE - NOISE_THRESHOLD)
   }
 
   useEffect(() => {
@@ -74,22 +86,13 @@ export function Visualizer({
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    // Layout constants
-    const GUTTER_HEIGHT = 60
-    const GUTTER_GAP = 40
-    const BOAT_RADIUS = 15
-    const PADDING = 50
-    const SPEED_MULT = 0.01  // How fast boats move per unit of loudness
-    const WHISTLE_BOOST = 30  // Boost for whistling (red boat) since energy is in ~3 bins but averaged over many
-    const SINGING_BOOST = 2.2 // Boost for singing (blue boat) since energy spreads across harmonics
-
     // Calculate positions based on canvas size
-    const gutterWidth = width - PADDING * 2
+    const gutterWidth = width - CANVAS_PADDING * 2
     const centerY = height / 2
     const gutter1Y = centerY - GUTTER_GAP / 2 - GUTTER_HEIGHT
     const gutter2Y = centerY + GUTTER_GAP / 2
-    const startX = PADDING + BOAT_RADIUS + 10
-    const finishX = width - PADDING - 20 - BOAT_RADIUS  // Where boat center reaches finish
+    const startX = CANVAS_PADDING + BOAT_RADIUS + 10
+    const finishX = width - CANVAS_PADDING - 20 - BOAT_RADIUS  // Where boat center reaches finish
 
     let frameId: number
 
@@ -98,37 +101,37 @@ export function Visualizer({
       if (!ctx) return
 
       // Clear canvas with black background
-      ctx.fillStyle = '#000000'
+      ctx.fillStyle = COLORS.background
       ctx.fillRect(0, 0, width, height)
 
       // Draw gutters (water channels)
-      ctx.fillStyle = '#1e3a5f'
-      ctx.fillRect(PADDING, gutter1Y, gutterWidth, GUTTER_HEIGHT)
-      ctx.fillRect(PADDING, gutter2Y, gutterWidth, GUTTER_HEIGHT)
+      ctx.fillStyle = COLORS.water
+      ctx.fillRect(CANVAS_PADDING, gutter1Y, gutterWidth, GUTTER_HEIGHT)
+      ctx.fillRect(CANVAS_PADDING, gutter2Y, gutterWidth, GUTTER_HEIGHT)
 
       // Calculate boat X positions by interpolating between start and finish
       const boat1X = startX + boat1PosRef.current * (finishX - startX)
       const boat2X = startX + boat2PosRef.current * (finishX - startX)
 
       // Draw red boat (top gutter)
-      ctx.fillStyle = '#ef4444'
+      ctx.fillStyle = COLORS.red.primary
       ctx.beginPath()
       ctx.arc(boat1X, gutter1Y + GUTTER_HEIGHT / 2, BOAT_RADIUS, 0, Math.PI * 2)
       ctx.fill()
 
       // Draw blue boat (bottom gutter)
-      ctx.fillStyle = '#3b82f6'
+      ctx.fillStyle = COLORS.blue.primary
       ctx.beginPath()
       ctx.arc(boat2X, gutter2Y + GUTTER_HEIGHT / 2, BOAT_RADIUS, 0, Math.PI * 2)
       ctx.fill()
 
       // Draw finish line
-      ctx.strokeStyle = '#ffffff'
+      ctx.strokeStyle = COLORS.finishLine
       ctx.lineWidth = 3
       ctx.setLineDash([10, 5])
       ctx.beginPath()
-      ctx.moveTo(width - PADDING - 20, gutter1Y - 10)
-      ctx.lineTo(width - PADDING - 20, gutter2Y + GUTTER_HEIGHT + 10)
+      ctx.moveTo(width - CANVAS_PADDING - 20, gutter1Y - 10)
+      ctx.lineTo(width - CANVAS_PADDING - 20, gutter2Y + GUTTER_HEIGHT + 10)
       ctx.stroke()
       ctx.setLineDash([])
 
@@ -141,8 +144,8 @@ export function Visualizer({
         const boat1Speed = getFrequencyAverage(frequencyData.current, boat1Range.start, boat1Range.end)
         const boat2Speed = getFrequencyAverage(frequencyData.current, boat2Range.start, boat2Range.end)
 
-        boat1PosRef.current += boat1Speed * SPEED_MULT * WHISTLE_BOOST
-        boat2PosRef.current += boat2Speed * SPEED_MULT * SINGING_BOOST
+        boat1PosRef.current += boat1Speed * BASE_SPEED_MULTIPLIER * WHISTLE_BOOST
+        boat2PosRef.current += boat2Speed * BASE_SPEED_MULTIPLIER * SINGING_BOOST
 
         // Clamp at finish line (can't go past 1)
         boat1PosRef.current = Math.min(boat1PosRef.current, 1)
@@ -200,11 +203,11 @@ export function Visualizer({
           gap: '20px',
         }}>
           {/* Red boat controls */}
-          <div style={{ color: '#ef4444', textAlign: 'center', width: '320px' }}>
+          <div style={{ color: COLORS.red.primary, textAlign: 'center', width: '320px' }}>
             <div style={{ marginBottom: '8px', fontFamily: 'monospace', fontSize: '14px' }}>
               Red Boat: {Math.round(boat1Range.start * HZ_PER_BIN)} - {Math.round(boat1Range.end * HZ_PER_BIN)} Hz
             </div>
-            <div style={{ marginBottom: '8px', fontSize: '12px', color: '#ef9a9a' }}>
+            <div style={{ marginBottom: '8px', fontSize: '12px', color: COLORS.red.secondary }}>
               ({getFrequencyLabel(boat1Range.start * HZ_PER_BIN)} - {getFrequencyLabel(boat1Range.end * HZ_PER_BIN)})
             </div>
             <Slider.Root
@@ -258,7 +261,7 @@ export function Visualizer({
               }}
             >
               <Slider.Track style={{
-                backgroundColor: '#333',
+                backgroundColor: COLORS.sliderTrack,
                 position: 'relative',
                 flexGrow: 1,
                 borderRadius: '9999px',
@@ -266,7 +269,7 @@ export function Visualizer({
               }}>
                 <Slider.Range style={{
                   position: 'absolute',
-                  backgroundColor: '#ef4444',
+                  backgroundColor: COLORS.red.primary,
                   borderRadius: '9999px',
                   height: '100%',
                 }} />
@@ -303,11 +306,11 @@ export function Visualizer({
           </div>
 
           {/* Blue boat controls */}
-          <div style={{ color: '#3b82f6', textAlign: 'center', width: '320px' }}>
+          <div style={{ color: COLORS.blue.primary, textAlign: 'center', width: '320px' }}>
             <div style={{ marginBottom: '8px', fontFamily: 'monospace', fontSize: '14px' }}>
               Blue Boat: {Math.round(boat2Range.start * HZ_PER_BIN)} - {Math.round(boat2Range.end * HZ_PER_BIN)} Hz
             </div>
-            <div style={{ marginBottom: '8px', fontSize: '12px', color: '#90caf9' }}>
+            <div style={{ marginBottom: '8px', fontSize: '12px', color: COLORS.blue.secondary }}>
               ({getFrequencyLabel(boat2Range.start * HZ_PER_BIN)} - {getFrequencyLabel(boat2Range.end * HZ_PER_BIN)})
             </div>
             <Slider.Root
@@ -356,7 +359,7 @@ export function Visualizer({
               }}
             >
               <Slider.Track style={{
-                backgroundColor: '#333',
+                backgroundColor: COLORS.sliderTrack,
                 position: 'relative',
                 flexGrow: 1,
                 borderRadius: '9999px',
@@ -364,7 +367,7 @@ export function Visualizer({
               }}>
                 <Slider.Range style={{
                   position: 'absolute',
-                  backgroundColor: '#3b82f6',
+                  backgroundColor: COLORS.blue.primary,
                   borderRadius: '9999px',
                   height: '100%',
                 }} />
@@ -427,7 +430,7 @@ export function Visualizer({
           gap: '16px',
         }}>
           <h2 style={{
-            color: winner === 'red' ? '#ef4444' : '#3b82f6',
+            color: winner === 'red' ? COLORS.red.primary : COLORS.blue.primary,
             fontSize: '48px',
             margin: 0,
           }}>
