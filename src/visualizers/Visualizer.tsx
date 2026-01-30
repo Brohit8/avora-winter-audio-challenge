@@ -2,8 +2,6 @@ import { useRef, useEffect, useState } from 'react'
 import * as Slider from '@radix-ui/react-slider'
 import type { VisualizerProps, Screen, FrequencyRange } from './types'
 import {
-  NOISE_THRESHOLD,
-  MAX_AUDIO_VALUE,
   HZ_PER_BIN,
   MAX_SLIDER_BIN,
   DEFAULT_RED_RANGE,
@@ -17,6 +15,7 @@ import {
   CANVAS_PADDING,
   COLORS,
 } from './constants'
+import { getFrequencyAverage, getFrequencyBandLabel } from './utils/audio'
 
 
 /**
@@ -57,27 +56,6 @@ export function Visualizer({
   const boat1PosRef = useRef<number>(0)
   const boat2PosRef = useRef<number>(0)
 
-
-  // Get descriptive label for a single frequency (standard audio production terms)
-  function getFrequencyLabel(hz: number): string {
-    if (hz < 60) return 'Sub-Bass'
-    if (hz < 250) return 'Bass'
-    if (hz < 500) return 'Low Mids'
-    if (hz < 2000) return 'Midrange'
-    if (hz < 4000) return 'Upper Mids'
-    return 'Presence'
-  }
-
-  function getFrequencyAverage(data: Uint8Array, startBin: number, endBin: number): number {
-    if (startBin >= endBin) return 0
-    let sum = 0
-    for (let i = startBin; i < endBin; i++) {
-      // Only count if above noise threshold
-      const value = data[i] > NOISE_THRESHOLD ? data[i] - NOISE_THRESHOLD : 0
-      sum += value
-    }
-    return sum / (endBin - startBin) / (MAX_AUDIO_VALUE - NOISE_THRESHOLD)
-  }
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -208,7 +186,7 @@ export function Visualizer({
               Red Boat: {Math.round(boat1Range.start * HZ_PER_BIN)} - {Math.round(boat1Range.end * HZ_PER_BIN)} Hz
             </div>
             <div style={{ marginBottom: '8px', fontSize: '12px', color: COLORS.red.secondary }}>
-              ({getFrequencyLabel(boat1Range.start * HZ_PER_BIN)} - {getFrequencyLabel(boat1Range.end * HZ_PER_BIN)})
+              ({getFrequencyBandLabel(boat1Range.start * HZ_PER_BIN)} - {getFrequencyBandLabel(boat1Range.end * HZ_PER_BIN)})
             </div>
             <Slider.Root
               min={0}
@@ -311,7 +289,7 @@ export function Visualizer({
               Blue Boat: {Math.round(boat2Range.start * HZ_PER_BIN)} - {Math.round(boat2Range.end * HZ_PER_BIN)} Hz
             </div>
             <div style={{ marginBottom: '8px', fontSize: '12px', color: COLORS.blue.secondary }}>
-              ({getFrequencyLabel(boat2Range.start * HZ_PER_BIN)} - {getFrequencyLabel(boat2Range.end * HZ_PER_BIN)})
+              ({getFrequencyBandLabel(boat2Range.start * HZ_PER_BIN)} - {getFrequencyBandLabel(boat2Range.end * HZ_PER_BIN)})
             </div>
             <Slider.Root
               min={0}
