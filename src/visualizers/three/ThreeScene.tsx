@@ -220,7 +220,8 @@ export function ThreeScene({
 
     // === Scene Setup ===
     const scene = new THREE.Scene()
-    scene.background = new THREE.Color(COLORS.background)
+    // Warm sky gradient - matches hemisphere light sky color
+    scene.background = new THREE.Color(0x87CEEB)
     sceneRef.current = scene
 
     // === Camera Setup ===
@@ -233,15 +234,34 @@ export function ThreeScene({
     const renderer = new THREE.WebGLRenderer({ antialias: true })
     renderer.setSize(width, height)
     renderer.setPixelRatio(window.devicePixelRatio)
+    renderer.shadowMap.enabled = true
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap
     container.appendChild(renderer.domElement)
     rendererRef.current = renderer
 
     // === Lighting ===
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6)
-    scene.add(ambientLight)
+    // Hemisphere light for natural ambient fill (sky to ground gradient)
+    const hemisphereLight = new THREE.HemisphereLight(
+      0x87CEEB,  // Sky color (light blue)
+      0xE8C872,  // Ground color (warm sand/earth)
+      0.7
+    )
+    scene.add(hemisphereLight)
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8)
-    directionalLight.position.set(5, 10, 5)
+    // Warm directional light for sun - positioned for classic 3/4 lighting
+    // (high and slightly behind camera which is at 0, 5, 10)
+    const directionalLight = new THREE.DirectionalLight(0xFFF5E6, 1.3)
+    directionalLight.position.set(2, 12, 15)
+    directionalLight.castShadow = true
+    // Shadow camera setup - covers the race course
+    directionalLight.shadow.mapSize.width = 1024
+    directionalLight.shadow.mapSize.height = 1024
+    directionalLight.shadow.camera.near = 1
+    directionalLight.shadow.camera.far = 30
+    directionalLight.shadow.camera.left = -10
+    directionalLight.shadow.camera.right = 10
+    directionalLight.shadow.camera.top = 10
+    directionalLight.shadow.camera.bottom = -10
     scene.add(directionalLight)
 
     // === Gutters (water channels with Gerstner wave shader) ===
@@ -285,10 +305,12 @@ export function ThreeScene({
 
     const water1 = new THREE.Mesh(waterGeometry, waterMaterial1)
     water1.position.set(0, 0.25, -2)
+    water1.receiveShadow = true
     scene.add(water1)
 
     const water2 = new THREE.Mesh(waterGeometry.clone(), waterMaterial2)
     water2.position.set(0, 0.25, 2)
+    water2.receiveShadow = true
     scene.add(water2)
 
     // Gutter sides (channel walls)
@@ -298,17 +320,21 @@ export function ThreeScene({
     // Top gutter walls
     const gutter1Left = new THREE.Mesh(gutterSideGeometry, gutterSideMaterial)
     gutter1Left.position.set(0, 0.15, -2.75)
+    gutter1Left.receiveShadow = true
     scene.add(gutter1Left)
     const gutter1Right = new THREE.Mesh(gutterSideGeometry, gutterSideMaterial)
     gutter1Right.position.set(0, 0.15, -1.25)
+    gutter1Right.receiveShadow = true
     scene.add(gutter1Right)
 
     // Bottom gutter walls
     const gutter2Left = new THREE.Mesh(gutterSideGeometry, gutterSideMaterial)
     gutter2Left.position.set(0, 0.15, 1.25)
+    gutter2Left.receiveShadow = true
     scene.add(gutter2Left)
     const gutter2Right = new THREE.Mesh(gutterSideGeometry, gutterSideMaterial)
     gutter2Right.position.set(0, 0.15, 2.75)
+    gutter2Right.receiveShadow = true
     scene.add(gutter2Right)
 
     // === Finish Line ===
@@ -316,6 +342,8 @@ export function ThreeScene({
     const finishLineMaterial = new THREE.MeshStandardMaterial({ color: COLORS.finishLine })
     const finishLine = new THREE.Mesh(finishLineGeometry, finishLineMaterial)
     finishLine.position.set(RACE_END_X, 0.3, 0)
+    finishLine.castShadow = true
+    finishLine.receiveShadow = true
     scene.add(finishLine)
 
     // === Load Boat Models ===
@@ -342,8 +370,12 @@ export function ThreeScene({
         // Red boat (top gutter)
         const redBoat = gltf.scene.clone()
         redBoat.traverse((child) => {
-          if (child instanceof THREE.Mesh && isSailMesh(child)) {
-            child.material = redSailMaterial
+          if (child instanceof THREE.Mesh) {
+            child.castShadow = true
+            child.receiveShadow = true
+            if (isSailMesh(child)) {
+              child.material = redSailMaterial
+            }
           }
         })
         redBoat.position.set(RACE_START_X, 0.5, -2)
@@ -355,8 +387,12 @@ export function ThreeScene({
         // Blue boat (bottom gutter)
         const blueBoat = gltf.scene.clone()
         blueBoat.traverse((child) => {
-          if (child instanceof THREE.Mesh && isSailMesh(child)) {
-            child.material = blueSailMaterial
+          if (child instanceof THREE.Mesh) {
+            child.castShadow = true
+            child.receiveShadow = true
+            if (isSailMesh(child)) {
+              child.material = blueSailMaterial
+            }
           }
         })
         blueBoat.position.set(RACE_START_X, 0.5, 2)
