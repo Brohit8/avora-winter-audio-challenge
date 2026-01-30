@@ -38,6 +38,7 @@ export function Visualizer({
 }: VisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [screen, setScreen] = useState<Screen>('setup')
+  const [winner, setWinner] = useState<'red' | 'blue' | null>(null)
   // Frequency ranges for each boat (FFT bin indices)
   // Red boat: high frequencies (1200+ Hz) - upper mids, presence
   const [boat1Range, setBoat1Range] = useState({ start: 56, end: 200 })
@@ -156,6 +157,17 @@ export function Visualizer({
         // Clamp at finish line (can't go past 1)
         boat1PosRef.current = Math.min(boat1PosRef.current, 1)
         boat2PosRef.current = Math.min(boat2PosRef.current, 1)
+
+        // Check for winner (first to reach position 1)
+        if (boat1PosRef.current >= 1 || boat2PosRef.current >= 1) {
+          // Determine winner (if tie, whoever is further ahead)
+          if (boat1PosRef.current > boat2PosRef.current) {
+            setWinner('red')
+          } else {
+            setWinner('blue')
+          }
+          setScreen('winner')
+        }
       }
 
       draw()
@@ -422,9 +434,22 @@ export function Visualizer({
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          gap: '16px',
         }}>
-          <h2 style={{ color: 'white' }}>Winner!</h2>
-          <button onClick={() => setScreen('setup')}>
+          <h2 style={{
+            color: winner === 'red' ? '#ef4444' : '#3b82f6',
+            fontSize: '48px',
+            margin: 0,
+          }}>
+            {winner === 'red' ? 'Red' : 'Blue'} Wins!
+          </h2>
+          <button onClick={() => {
+            // Reset game state
+            boat1PosRef.current = 0
+            boat2PosRef.current = 0
+            setWinner(null)
+            setScreen('setup')
+          }}>
             Race Again
           </button>
         </div>
