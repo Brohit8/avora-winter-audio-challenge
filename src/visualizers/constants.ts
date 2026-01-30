@@ -4,7 +4,7 @@ import type { FrequencyRange } from './types'
 // Audio Processing
 // =============================================================================
 
-export const NOISE_THRESHOLD = 120      // Ignore FFT values below this (0-255 scale)
+export const NOISE_THRESHOLD = 80      // Ignore FFT values below this (0-255 scale)
 export const MAX_AUDIO_VALUE = 255      // Maximum FFT bin value
 export const HZ_PER_BIN = 21.5          // Approx Hz per FFT bin (44100 / 2048)
 
@@ -23,8 +23,8 @@ export const DEFAULT_BLUE_RANGE: FrequencyRange = { start: 0, end: 56 }    // 0-
 // =============================================================================
 
 export const BASE_SPEED_MULTIPLIER = 0.01   // Base movement per unit of loudness
-export const WHISTLE_BOOST = 30             // Narrow-band signals need more boost
-export const SINGING_BOOST = 2.2            // Spread-spectrum signals need less
+export const WHISTLE_BOOST = 30             // Narrow-band signals (whistling) need more boost
+export const SINGING_BOOST = 7             // Spread-spectrum signals (singing/humming)
 
 // =============================================================================
 // Canvas 2D Layout (will be replaced by Three.js constants)
