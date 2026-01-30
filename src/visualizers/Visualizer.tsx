@@ -1,15 +1,6 @@
 import { useRef, useEffect, useState } from 'react'
 import * as Slider from '@radix-ui/react-slider'
-
-export interface VisualizerProps {
-  frequencyData: React.RefObject<Uint8Array<ArrayBufferLike>>
-  timeDomainData: React.RefObject<Uint8Array<ArrayBufferLike>>
-  isActive: boolean
-  width: number
-  height: number
-}
-// Screen states for our game
-type Screen = 'setup' | 'race' | 'winner'
+import type { VisualizerProps, Screen, FrequencyRange } from './types'
 
 
 /**
@@ -32,7 +23,8 @@ type Screen = 'setup' | 'race' | 'winner'
  */
 export function Visualizer({
   frequencyData,
-  // timeDomainData and isActive available but unused in this visualization
+  timeDomainData: _timeDomainData,
+  isActive: _isActive,
   width,
   height,
 }: VisualizerProps) {
@@ -40,10 +32,8 @@ export function Visualizer({
   const [screen, setScreen] = useState<Screen>('setup')
   const [winner, setWinner] = useState<'red' | 'blue' | null>(null)
   // Frequency ranges for each boat (FFT bin indices)
-  // Red boat: high frequencies (1200+ Hz) - upper mids, presence
-  const [boat1Range, setBoat1Range] = useState({ start: 56, end: 200 })
-  // Blue boat: low frequencies (0-1200 Hz) - bass, low mids, midrange
-  const [boat2Range, setBoat2Range] = useState({ start: 0, end: 56 })
+  const [boat1Range, setBoat1Range] = useState<FrequencyRange>({ start: 56, end: 200 })
+  const [boat2Range, setBoat2Range] = useState<FrequencyRange>({ start: 0, end: 56 })
   const [draggingThumb, setDraggingThumb] = useState<'start' | 'end' | null>(null)
   // Stores the "other" thumb's position when we start dragging
   const dragAnchorRef = useRef<number>(0)
