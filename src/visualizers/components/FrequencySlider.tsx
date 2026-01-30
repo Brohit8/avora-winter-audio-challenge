@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react'
 import * as Slider from '@radix-ui/react-slider'
 import type { FrequencyRange, BoatColor } from '../types'
-import { HZ_PER_BIN, MAX_SLIDER_BIN, COLORS } from '../constants'
-import { getFrequencyBandLabel } from '../utils/audio'
+import { MAX_SLIDER_BIN, COLORS } from '../constants'
+import { getFrequencyBandLabel, binToHz } from '../utils/audio'
 
 interface FrequencySliderProps {
   color: BoatColor
@@ -58,10 +58,10 @@ export function FrequencySlider({
   return (
     <div style={{ color: colors.primary, textAlign: 'center', width: '320px' }}>
       <div style={{ marginBottom: '8px', fontFamily: 'monospace', fontSize: '14px' }}>
-        {label}: {Math.round(range.start * HZ_PER_BIN)} - {Math.round(range.end * HZ_PER_BIN)} Hz
+        {label}: {binToHz(range.start)} - {binToHz(range.end)} Hz
       </div>
       <div style={{ marginBottom: '8px', fontSize: '12px', color: colors.secondary }}>
-        ({getFrequencyBandLabel(range.start * HZ_PER_BIN)} - {getFrequencyBandLabel(range.end * HZ_PER_BIN)})
+        ({getFrequencyBandLabel(binToHz(range.start))} - {getFrequencyBandLabel(binToHz(range.end))})
       </div>
       <Slider.Root
         min={0}
