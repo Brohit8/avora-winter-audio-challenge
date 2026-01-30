@@ -1,9 +1,6 @@
 import { useRef, useEffect, useState } from 'react'
-import * as Slider from '@radix-ui/react-slider'
 import type { VisualizerProps, Screen, FrequencyRange } from './types'
 import {
-  HZ_PER_BIN,
-  MAX_SLIDER_BIN,
   DEFAULT_RED_RANGE,
   DEFAULT_BLUE_RANGE,
   BASE_SPEED_MULTIPLIER,
@@ -15,7 +12,8 @@ import {
   CANVAS_PADDING,
   COLORS,
 } from './constants'
-import { getFrequencyAverage, getFrequencyBandLabel } from './utils/audio'
+import { getFrequencyAverage } from './utils/audio'
+import { FrequencySlider } from './components/FrequencySlider'
 
 
 /**
@@ -49,9 +47,6 @@ export function Visualizer({
   // Frequency ranges for each boat (FFT bin indices)
   const [boat1Range, setBoat1Range] = useState<FrequencyRange>(DEFAULT_RED_RANGE)
   const [boat2Range, setBoat2Range] = useState<FrequencyRange>(DEFAULT_BLUE_RANGE)
-  const [draggingThumb, setDraggingThumb] = useState<'start' | 'end' | null>(null)
-  // Stores the "other" thumb's position when we start dragging
-  const dragAnchorRef = useRef<number>(0)
   // Boat positions: 0 = starting line, 1 = finish line
   const boat1PosRef = useRef<number>(0)
   const boat2PosRef = useRef<number>(0)
@@ -180,206 +175,19 @@ export function Visualizer({
           backgroundColor: 'rgba(0, 0, 0, 0.7)',
           gap: '20px',
         }}>
-          {/* Red boat controls */}
-          <div style={{ color: COLORS.red.primary, textAlign: 'center', width: '320px' }}>
-            <div style={{ marginBottom: '8px', fontFamily: 'monospace', fontSize: '14px' }}>
-              Red Boat: {Math.round(boat1Range.start * HZ_PER_BIN)} - {Math.round(boat1Range.end * HZ_PER_BIN)} Hz
-            </div>
-            <div style={{ marginBottom: '8px', fontSize: '12px', color: COLORS.red.secondary }}>
-              ({getFrequencyBandLabel(boat1Range.start * HZ_PER_BIN)} - {getFrequencyBandLabel(boat1Range.end * HZ_PER_BIN)})
-            </div>
-            <Slider.Root
-              min={0}
-              max={MAX_SLIDER_BIN}
-              step={1}
-              value={[boat1Range.start, boat1Range.end]}
-              onValueChange={([val1, val2]) => {
-                if (draggingThumb === 'start') {
-                  const anchor = dragAnchorRef.current
-                  // Figure out which value is our dragged position
-                  let draggedPos: number
-                  if (val2 === anchor) {
-                    // Haven't crossed yet - val1 is our position
-                    draggedPos = val1
-                  } else if (val1 >= anchor) {
-                    // Crossed and pushing - val2 is our position
-                    draggedPos = val2
-                  } else {
-                    draggedPos = val1
-                  }
-                  const newEnd = Math.max(draggedPos, anchor)
-                  setBoat1Range({ start: draggedPos, end: newEnd })
-                  dragAnchorRef.current = newEnd
-                } else if (draggingThumb === 'end') {
-                  const anchor = dragAnchorRef.current
-                  let draggedPos: number
-                  if (val1 === anchor) {
-                    // Haven't crossed yet - val2 is our position
-                    draggedPos = val2
-                  } else if (val2 <= anchor) {
-                    // Crossed and pushing - val1 is our position
-                    draggedPos = val1
-                  } else {
-                    draggedPos = val2
-                  }
-                  const newStart = Math.min(draggedPos, anchor)
-                  setBoat1Range({ start: newStart, end: draggedPos })
-                  dragAnchorRef.current = newStart
-                } else {
-                  setBoat1Range({ start: val1, end: val2 })
-                }
-              }}
-              onValueCommit={() => setDraggingThumb(null)}
-              style={{
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                width: '200px',
-                height: '20px',
-              }}
-            >
-              <Slider.Track style={{
-                backgroundColor: COLORS.sliderTrack,
-                position: 'relative',
-                flexGrow: 1,
-                borderRadius: '9999px',
-                height: '4px',
-              }}>
-                <Slider.Range style={{
-                  position: 'absolute',
-                  backgroundColor: COLORS.red.primary,
-                  borderRadius: '9999px',
-                  height: '100%',
-                }} />
-              </Slider.Track>
-              <Slider.Thumb
-                onPointerDown={() => {
-                  setDraggingThumb('start')
-                  dragAnchorRef.current = boat1Range.end
-                }}
-                style={{
-                  display: 'block',
-                  width: '16px',
-                  height: '16px',
-                  backgroundColor: 'white',
-                  borderRadius: '50%',
-                  cursor: 'pointer',
-                }}
-              />
-              <Slider.Thumb
-                onPointerDown={() => {
-                  setDraggingThumb('end')
-                  dragAnchorRef.current = boat1Range.start
-                }}
-                style={{
-                  display: 'block',
-                  width: '16px',
-                  height: '16px',
-                  backgroundColor: 'white',
-                  borderRadius: '50%',
-                  cursor: 'pointer',
-                }}
-              />
-            </Slider.Root>
-          </div>
+          <FrequencySlider
+            color="red"
+            label="Red Boat"
+            range={boat1Range}
+            onRangeChange={setBoat1Range}
+          />
 
-          {/* Blue boat controls */}
-          <div style={{ color: COLORS.blue.primary, textAlign: 'center', width: '320px' }}>
-            <div style={{ marginBottom: '8px', fontFamily: 'monospace', fontSize: '14px' }}>
-              Blue Boat: {Math.round(boat2Range.start * HZ_PER_BIN)} - {Math.round(boat2Range.end * HZ_PER_BIN)} Hz
-            </div>
-            <div style={{ marginBottom: '8px', fontSize: '12px', color: COLORS.blue.secondary }}>
-              ({getFrequencyBandLabel(boat2Range.start * HZ_PER_BIN)} - {getFrequencyBandLabel(boat2Range.end * HZ_PER_BIN)})
-            </div>
-            <Slider.Root
-              min={0}
-              max={MAX_SLIDER_BIN}
-              step={1}
-              value={[boat2Range.start, boat2Range.end]}
-              onValueChange={([val1, val2]) => {
-                if (draggingThumb === 'start') {
-                  const anchor = dragAnchorRef.current
-                  let draggedPos: number
-                  if (val2 === anchor) {
-                    draggedPos = val1
-                  } else if (val1 >= anchor) {
-                    draggedPos = val2
-                  } else {
-                    draggedPos = val1
-                  }
-                  const newEnd = Math.max(draggedPos, anchor)
-                  setBoat2Range({ start: draggedPos, end: newEnd })
-                  dragAnchorRef.current = newEnd
-                } else if (draggingThumb === 'end') {
-                  const anchor = dragAnchorRef.current
-                  let draggedPos: number
-                  if (val1 === anchor) {
-                    draggedPos = val2
-                  } else if (val2 <= anchor) {
-                    draggedPos = val1
-                  } else {
-                    draggedPos = val2
-                  }
-                  const newStart = Math.min(draggedPos, anchor)
-                  setBoat2Range({ start: newStart, end: draggedPos })
-                  dragAnchorRef.current = newStart
-                } else {
-                  setBoat2Range({ start: val1, end: val2 })
-                }
-              }}
-              onValueCommit={() => setDraggingThumb(null)}
-              style={{
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                width: '200px',
-                height: '20px',
-              }}
-            >
-              <Slider.Track style={{
-                backgroundColor: COLORS.sliderTrack,
-                position: 'relative',
-                flexGrow: 1,
-                borderRadius: '9999px',
-                height: '4px',
-              }}>
-                <Slider.Range style={{
-                  position: 'absolute',
-                  backgroundColor: COLORS.blue.primary,
-                  borderRadius: '9999px',
-                  height: '100%',
-                }} />
-              </Slider.Track>
-              <Slider.Thumb
-                onPointerDown={() => {
-                  setDraggingThumb('start')
-                  dragAnchorRef.current = boat2Range.end
-                }}
-                style={{
-                  display: 'block',
-                  width: '16px',
-                  height: '16px',
-                  backgroundColor: 'white',
-                  borderRadius: '50%',
-                  cursor: 'pointer',
-                }}
-              />
-              <Slider.Thumb
-                onPointerDown={() => {
-                  setDraggingThumb('end')
-                  dragAnchorRef.current = boat2Range.start
-                }}
-                style={{
-                  display: 'block',
-                  width: '16px',
-                  height: '16px',
-                  backgroundColor: 'white',
-                  borderRadius: '50%',
-                  cursor: 'pointer',
-                }}
-              />
-            </Slider.Root>
-          </div>
+          <FrequencySlider
+            color="blue"
+            label="Blue Boat"
+            range={boat2Range}
+            onRangeChange={setBoat2Range}
+          />
 
           <button onClick={() => {
             // Reset boat positions to start
