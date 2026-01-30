@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react'
 import * as Slider from '@radix-ui/react-slider'
-import type { FrequencyRange } from '../types'
-import type { BoatColor } from '../types'
+import type { FrequencyRange, BoatColor } from '../types'
 import { HZ_PER_BIN, MAX_SLIDER_BIN, COLORS } from '../constants'
 import { getFrequencyBandLabel } from '../utils/audio'
 

@@ -51,6 +51,10 @@ export function Visualizer({
   const boat1PosRef = useRef<number>(0)
   const boat2PosRef = useRef<number>(0)
 
+  function resetBoatPositions() {
+    boat1PosRef.current = 0
+    boat2PosRef.current = 0
+  }
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -190,9 +194,7 @@ export function Visualizer({
           />
 
           <button onClick={() => {
-            // Reset boat positions to start
-            boat1PosRef.current = 0
-            boat2PosRef.current = 0
+            resetBoatPositions()
             setScreen('race')
           }}>
             Start Race
@@ -223,9 +225,7 @@ export function Visualizer({
             {winner === 'red' ? 'Red' : 'Blue'} Wins!
           </h2>
           <button onClick={() => {
-            // Reset game state
-            boat1PosRef.current = 0
-            boat2PosRef.current = 0
+            resetBoatPositions()
             setWinner(null)
             setScreen('setup')
           }}>
