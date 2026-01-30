@@ -2,8 +2,8 @@ import { useRef, useEffect, useState } from 'react'
 import * as Slider from '@radix-ui/react-slider'
 
 export interface VisualizerProps {
-  frequencyData: React.RefObject<Uint8Array<ArrayBuffer>>
-  timeDomainData: React.RefObject<Uint8Array<ArrayBuffer>>
+  frequencyData: React.RefObject<Uint8Array<ArrayBufferLike>>
+  timeDomainData: React.RefObject<Uint8Array<ArrayBufferLike>>
   isActive: boolean
   width: number
   height: number
@@ -32,22 +32,49 @@ type Screen = 'setup' | 'race' | 'winner'
  */
 export function Visualizer({
   frequencyData,
-  timeDomainData,
-  isActive,
+  // timeDomainData and isActive available but unused in this visualization
   width,
   height,
 }: VisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [screen, setScreen] = useState<Screen>('setup')
-  // Frequency ranges for each boat (FFT bin indices, 0-1023)
-  const [boat1Range, setBoat1Range] = useState({ start: 0, end: 100 })
-  const [boat2Range, setBoat2Range] = useState({ start: 150, end: 300 })
+  // Frequency ranges for each boat (FFT bin indices)
+  // Red boat: high frequencies (1200+ Hz) - upper mids, presence
+  const [boat1Range, setBoat1Range] = useState({ start: 56, end: 200 })
+  // Blue boat: low frequencies (0-1200 Hz) - bass, low mids, midrange
+  const [boat2Range, setBoat2Range] = useState({ start: 0, end: 56 })
   const [draggingThumb, setDraggingThumb] = useState<'start' | 'end' | null>(null)
   // Stores the "other" thumb's position when we start dragging
   const dragAnchorRef = useRef<number>(0)
+  // Boat positions: 0 = starting line, 1 = finish line
+  const boat1PosRef = useRef<number>(0)
+  const boat2PosRef = useRef<number>(0)
 
+  // Audio processing constants
+  const NOISE_THRESHOLD = 120    // Ignore values below this (0-255 scale)
+  const MAX_SLIDER_BIN = 200     // ~4300 Hz - covers bass, voice, sax, whistling
+  const HZ_PER_BIN = 21.5        // Approx Hz per FFT bin (44100 / 2048)
 
+  // Get descriptive label for a single frequency (standard audio production terms)
+  function getFrequencyLabel(hz: number): string {
+    if (hz < 60) return 'Sub-Bass'
+    if (hz < 250) return 'Bass'
+    if (hz < 500) return 'Low Mids'
+    if (hz < 2000) return 'Midrange'
+    if (hz < 4000) return 'Upper Mids'
+    return 'Presence'
+  }
 
+  function getFrequencyAverage(data: Uint8Array, startBin: number, endBin: number): number {
+    if (startBin >= endBin) return 0
+    let sum = 0
+    for (let i = startBin; i < endBin; i++) {
+      // Only count if above noise threshold
+      const value = data[i] > NOISE_THRESHOLD ? data[i] - NOISE_THRESHOLD : 0
+      sum += value
+    }
+    return sum / (endBin - startBin) / (255 - NOISE_THRESHOLD)
+  }
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -61,6 +88,9 @@ export function Visualizer({
     const GUTTER_GAP = 40
     const BOAT_RADIUS = 15
     const PADDING = 50
+    const SPEED_MULT = 0.01  // How fast boats move per unit of loudness
+    const WHISTLE_BOOST = 30  // Boost for whistling (red boat) since energy is in ~3 bins but averaged over many
+    const SINGING_BOOST = 2.2 // Boost for singing (blue boat) since energy spreads across harmonics
 
     // Calculate positions based on canvas size
     const gutterWidth = width - PADDING * 2
@@ -68,40 +98,80 @@ export function Visualizer({
     const gutter1Y = centerY - GUTTER_GAP / 2 - GUTTER_HEIGHT
     const gutter2Y = centerY + GUTTER_GAP / 2
     const startX = PADDING + BOAT_RADIUS + 10
+    const finishX = width - PADDING - 20 - BOAT_RADIUS  // Where boat center reaches finish
 
-    // Clear canvas with black background
-    ctx.fillStyle = '#000000'
-    ctx.fillRect(0, 0, width, height)
+    let frameId: number
 
-    // Draw gutters (water channels)
-    ctx.fillStyle = '#1e3a5f'
-    ctx.fillRect(PADDING, gutter1Y, gutterWidth, GUTTER_HEIGHT)
-    ctx.fillRect(PADDING, gutter2Y, gutterWidth, GUTTER_HEIGHT)
+    // Draw function: renders the entire scene
+    function draw() {
+      if (!ctx) return
 
-    // Draw red boat (top gutter)
-    ctx.fillStyle = '#ef4444'
-    ctx.beginPath()
-    ctx.arc(startX, gutter1Y + GUTTER_HEIGHT / 2, BOAT_RADIUS, 0, Math.PI * 2)
-    ctx.fill()
+      // Clear canvas with black background
+      ctx.fillStyle = '#000000'
+      ctx.fillRect(0, 0, width, height)
 
-    // Draw blue boat (bottom gutter)
-    ctx.fillStyle = '#3b82f6'
-    ctx.beginPath()
-    ctx.arc(startX, gutter2Y + GUTTER_HEIGHT / 2, BOAT_RADIUS, 0, Math.PI * 2)
-    ctx.fill()
+      // Draw gutters (water channels)
+      ctx.fillStyle = '#1e3a5f'
+      ctx.fillRect(PADDING, gutter1Y, gutterWidth, GUTTER_HEIGHT)
+      ctx.fillRect(PADDING, gutter2Y, gutterWidth, GUTTER_HEIGHT)
 
-    // Draw finish line
-    ctx.strokeStyle = '#ffffff'
-    ctx.lineWidth = 3
-    ctx.setLineDash([10, 5])
-    ctx.beginPath()
-    ctx.moveTo(width - PADDING - 20, gutter1Y - 10)
-    ctx.lineTo(width - PADDING - 20, gutter2Y + GUTTER_HEIGHT + 10)
-    ctx.stroke()
-    ctx.setLineDash([])
+      // Calculate boat X positions by interpolating between start and finish
+      const boat1X = startX + boat1PosRef.current * (finishX - startX)
+      const boat2X = startX + boat2PosRef.current * (finishX - startX)
 
+      // Draw red boat (top gutter)
+      ctx.fillStyle = '#ef4444'
+      ctx.beginPath()
+      ctx.arc(boat1X, gutter1Y + GUTTER_HEIGHT / 2, BOAT_RADIUS, 0, Math.PI * 2)
+      ctx.fill()
 
-  }, [isActive, frequencyData, timeDomainData, width, height])
+      // Draw blue boat (bottom gutter)
+      ctx.fillStyle = '#3b82f6'
+      ctx.beginPath()
+      ctx.arc(boat2X, gutter2Y + GUTTER_HEIGHT / 2, BOAT_RADIUS, 0, Math.PI * 2)
+      ctx.fill()
+
+      // Draw finish line
+      ctx.strokeStyle = '#ffffff'
+      ctx.lineWidth = 3
+      ctx.setLineDash([10, 5])
+      ctx.beginPath()
+      ctx.moveTo(width - PADDING - 20, gutter1Y - 10)
+      ctx.lineTo(width - PADDING - 20, gutter2Y + GUTTER_HEIGHT + 10)
+      ctx.stroke()
+      ctx.setLineDash([])
+
+    }
+
+    // Animation loop: updates positions during race, then draws
+    function animate() {
+      // During race, update boat positions from audio data
+      if (screen === 'race' && frequencyData.current) {
+        const boat1Speed = getFrequencyAverage(frequencyData.current, boat1Range.start, boat1Range.end)
+        const boat2Speed = getFrequencyAverage(frequencyData.current, boat2Range.start, boat2Range.end)
+
+        boat1PosRef.current += boat1Speed * SPEED_MULT * WHISTLE_BOOST
+        boat2PosRef.current += boat2Speed * SPEED_MULT * SINGING_BOOST
+
+        // Clamp at finish line (can't go past 1)
+        boat1PosRef.current = Math.min(boat1PosRef.current, 1)
+        boat2PosRef.current = Math.min(boat2PosRef.current, 1)
+      }
+
+      draw()
+
+      // Schedule next frame
+      frameId = requestAnimationFrame(animate)
+    }
+
+    // Start the animation loop
+    frameId = requestAnimationFrame(animate)
+
+    // Cleanup: cancel animation frame when effect re-runs or component unmounts
+    return () => {
+      cancelAnimationFrame(frameId)
+    }
+  }, [screen, boat1Range, boat2Range, width, height, frequencyData])
 
   return (
     <div style={{ position: 'relative', width, height }}>
@@ -128,13 +198,16 @@ export function Visualizer({
           gap: '20px',
         }}>
           {/* Red boat controls */}
-          <div style={{ color: '#ef4444', textAlign: 'center' }}>
-            <div style={{ marginBottom: '8px' }}>
-              Red Boat: {boat1Range.start} - {boat1Range.end}
+          <div style={{ color: '#ef4444', textAlign: 'center', width: '320px' }}>
+            <div style={{ marginBottom: '8px', fontFamily: 'monospace', fontSize: '14px' }}>
+              Red Boat: {Math.round(boat1Range.start * HZ_PER_BIN)} - {Math.round(boat1Range.end * HZ_PER_BIN)} Hz
+            </div>
+            <div style={{ marginBottom: '8px', fontSize: '12px', color: '#ef9a9a' }}>
+              ({getFrequencyLabel(boat1Range.start * HZ_PER_BIN)} - {getFrequencyLabel(boat1Range.end * HZ_PER_BIN)})
             </div>
             <Slider.Root
               min={0}
-              max={1023}
+              max={MAX_SLIDER_BIN}
               step={1}
               value={[boat1Range.start, boat1Range.end]}
               onValueChange={([val1, val2]) => {
@@ -227,16 +300,17 @@ export function Visualizer({
             </Slider.Root>
           </div>
 
-
-
           {/* Blue boat controls */}
-          <div style={{ color: '#3b82f6', textAlign: 'center' }}>
-            <div style={{ marginBottom: '8px' }}>
-              Blue Boat: {boat2Range.start} - {boat2Range.end}
+          <div style={{ color: '#3b82f6', textAlign: 'center', width: '320px' }}>
+            <div style={{ marginBottom: '8px', fontFamily: 'monospace', fontSize: '14px' }}>
+              Blue Boat: {Math.round(boat2Range.start * HZ_PER_BIN)} - {Math.round(boat2Range.end * HZ_PER_BIN)} Hz
+            </div>
+            <div style={{ marginBottom: '8px', fontSize: '12px', color: '#90caf9' }}>
+              ({getFrequencyLabel(boat2Range.start * HZ_PER_BIN)} - {getFrequencyLabel(boat2Range.end * HZ_PER_BIN)})
             </div>
             <Slider.Root
               min={0}
-              max={1023}
+              max={MAX_SLIDER_BIN}
               step={1}
               value={[boat2Range.start, boat2Range.end]}
               onValueChange={([val1, val2]) => {
@@ -324,7 +398,12 @@ export function Visualizer({
             </Slider.Root>
           </div>
 
-          <button onClick={() => setScreen('race')}>
+          <button onClick={() => {
+            // Reset boat positions to start
+            boat1PosRef.current = 0
+            boat2PosRef.current = 0
+            setScreen('race')
+          }}>
             Start Race
           </button>
         </div>
