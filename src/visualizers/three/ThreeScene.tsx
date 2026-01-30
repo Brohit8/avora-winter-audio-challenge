@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react'
 import * as THREE from 'three'
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import type { VisualizerProps } from '../types'
 import { COLORS } from '../constants'
 
@@ -9,8 +10,8 @@ import { COLORS } from '../constants'
  * This component sets up a basic Three.js scene with:
  * - Perspective camera
  * - WebGL renderer
- * - Placeholder gutters (blue boxes)
- * - Placeholder boats (red/blue spheres)
+ * - Water channel gutters
+ * - Regatta boat models (loaded from GLB)
  */
 export function ThreeScene({
   frequencyData: _frequencyData,
@@ -48,9 +49,7 @@ export function ThreeScene({
     directionalLight.position.set(5, 10, 5)
     scene.add(directionalLight)
 
-    // === Placeholder Objects ===
-
-    // Gutters (water channels) - two blue boxes
+    // === Gutters (water channels) ===
     const gutterGeometry = new THREE.BoxGeometry(12, 0.5, 1.5)
     const gutterMaterial = new THREE.MeshStandardMaterial({ color: COLORS.water })
 
@@ -62,18 +61,70 @@ export function ThreeScene({
     gutter2.position.set(0, 0, 2)
     scene.add(gutter2)
 
-    // Boats - two spheres (red and blue)
-    const boatGeometry = new THREE.SphereGeometry(0.5, 32, 32)
+    // === Load Boat Models ===
+    const loader = new GLTFLoader()
 
-    const redBoatMaterial = new THREE.MeshStandardMaterial({ color: COLORS.red.primary })
-    const redBoat = new THREE.Mesh(boatGeometry, redBoatMaterial)
-    redBoat.position.set(-4, 0.5, -2)
-    scene.add(redBoat)
+    // Materials for the sails (hull keeps original GLB colors)
+    const redSailMaterial = new THREE.MeshStandardMaterial({
+      color: COLORS.red.primary,
+      metalness: 0.0,
+      roughness: 0.9,
+    })
+    const blueSailMaterial = new THREE.MeshStandardMaterial({
+      color: COLORS.blue.primary,
+      metalness: 0.0,
+      roughness: 0.9,
+    })
 
-    const blueBoatMaterial = new THREE.MeshStandardMaterial({ color: COLORS.blue.primary })
-    const blueBoat = new THREE.Mesh(boatGeometry, blueBoatMaterial)
-    blueBoat.position.set(-4, 0.5, 2)
-    scene.add(blueBoat)
+    // Track loaded boats for cleanup
+    let redBoat: THREE.Group | null = null
+    let blueBoat: THREE.Group | null = null
+
+    loader.load(
+      '/models/regatta_boat.glb',
+      (gltf) => {
+        // Debug: log all mesh names and their parents
+        console.log('=== GLB Scene Structure ===')
+        gltf.scene.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            console.log(`Mesh: "${child.name}", Parent: "${child.parent?.name}"`)
+          }
+        })
+
+        // Helper to check if mesh is part of the sail
+        const isSailMesh = (mesh: THREE.Mesh) => {
+          return mesh.name.includes('Sail') || mesh.parent?.name.includes('Sail')
+        }
+
+        // Red boat (top gutter)
+        redBoat = gltf.scene.clone()
+        redBoat.traverse((child) => {
+          if (child instanceof THREE.Mesh && isSailMesh(child)) {
+            child.material = redSailMaterial
+          }
+        })
+        redBoat.position.set(-4, 0.5, -2)
+        redBoat.scale.set(0.5, 0.5, 0.5)
+        redBoat.rotation.y = Math.PI / 2 // 90 degrees - face racing direction
+        scene.add(redBoat)
+
+        // Blue boat (bottom gutter)
+        blueBoat = gltf.scene.clone()
+        blueBoat.traverse((child) => {
+          if (child instanceof THREE.Mesh && isSailMesh(child)) {
+            child.material = blueSailMaterial
+          }
+        })
+        blueBoat.position.set(-4, 0.5, 2)
+        blueBoat.scale.set(0.5, 0.5, 0.5)
+        blueBoat.rotation.y = Math.PI / 2 // 90 degrees - face racing direction
+        scene.add(blueBoat)
+      },
+      undefined,
+      (error) => {
+        console.error('Error loading boat model:', error)
+      }
+    )
 
     // === Animation Loop ===
     let frameId: number
@@ -91,9 +142,12 @@ export function ThreeScene({
       // Dispose geometries and materials
       gutterGeometry.dispose()
       gutterMaterial.dispose()
-      boatGeometry.dispose()
-      redBoatMaterial.dispose()
-      blueBoatMaterial.dispose()
+      redSailMaterial.dispose()
+      blueSailMaterial.dispose()
+
+      // Remove boats from scene
+      if (redBoat) scene.remove(redBoat)
+      if (blueBoat) scene.remove(blueBoat)
 
       // Dispose renderer and remove from DOM
       renderer.dispose()
