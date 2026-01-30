@@ -13,7 +13,8 @@ import {
   COLORS,
 } from './constants'
 import { getFrequencyAverage } from './utils/audio'
-import { FrequencySlider } from './components/FrequencySlider'
+import { SetupOverlay } from './components/SetupOverlay'
+import { WinnerOverlay } from './components/WinnerOverlay'
 
 
 /**
@@ -164,74 +165,28 @@ export function Visualizer({
         style={{ display: 'block' }}
       />
 
-      {/* Setup screen overlay */}
       {screen === 'setup' && (
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          gap: '20px',
-        }}>
-          <FrequencySlider
-            color="red"
-            label="Red Boat"
-            range={boat1Range}
-            onRangeChange={setBoat1Range}
-          />
-
-          <FrequencySlider
-            color="blue"
-            label="Blue Boat"
-            range={boat2Range}
-            onRangeChange={setBoat2Range}
-          />
-
-          <button onClick={() => {
+        <SetupOverlay
+          boat1Range={boat1Range}
+          boat2Range={boat2Range}
+          onBoat1RangeChange={setBoat1Range}
+          onBoat2RangeChange={setBoat2Range}
+          onStartRace={() => {
             resetBoatPositions()
             setScreen('race')
-          }}>
-            Start Race
-          </button>
-        </div>
+          }}
+        />
       )}
 
-      {/* Winner screen overlay */}
-      {screen === 'winner' && (
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          gap: '16px',
-        }}>
-          <h2 style={{
-            color: winner === 'red' ? COLORS.red.primary : COLORS.blue.primary,
-            fontSize: '48px',
-            margin: 0,
-          }}>
-            {winner === 'red' ? 'Red' : 'Blue'} Wins!
-          </h2>
-          <button onClick={() => {
+      {screen === 'winner' && winner && (
+        <WinnerOverlay
+          winner={winner}
+          onRaceAgain={() => {
             resetBoatPositions()
             setWinner(null)
             setScreen('setup')
-          }}>
-            Race Again
-          </button>
-        </div>
+          }}
+        />
       )}
     </div>
   )
