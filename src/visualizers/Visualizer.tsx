@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from 'react'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
-import type { VisualizerProps, Screen, FrequencyRange, BoatColor } from '../types'
+import type { VisualizerProps, Screen, FrequencyRange, BoatColor } from './types'
 import {
   COLORS,
   DEFAULT_RED_RANGE,
@@ -9,18 +9,18 @@ import {
   BASE_SPEED_MULTIPLIER,
   WHISTLE_BOOST,
   SINGING_BOOST,
-} from '../constants'
-import { getFrequencyAverage } from '../utils/audio'
-import { SetupOverlay } from '../components/SetupOverlay'
-import { WinnerOverlay } from '../components/WinnerOverlay'
-import { createWindSwirlSprites, updateWindSwirls, disposeWindSwirls } from './windSwirls'
-import { createSandTerrain } from './sandTerrain'
+} from './constants'
+import { getFrequencyAverage } from './utils/audio'
+import { SetupOverlay } from './components/SetupOverlay'
+import { WinnerOverlay } from './components/WinnerOverlay'
+import { createWindSwirlSprites, updateWindSwirls, disposeWindSwirls } from './three/windSwirls'
+import { createSandTerrain } from './three/sandTerrain'
 import {
   waterVertexShader,
   waterFragmentShader,
   getGerstnerDisplacement,
   getGerstnerNormal,
-} from './gerstnerWaves'
+} from './three/gerstnerWaves'
 
 // =============================================================================
 // 3D Scene Layout (module-specific constants)
@@ -56,9 +56,9 @@ function easeOutCubic(t: number): number {
 }
 
 /**
- * ThreeScene - Three.js boat race visualizer with game logic
+ * Visualizer - Three.js boat race visualizer with game logic
  */
-export function ThreeScene({
+export function Visualizer({
   frequencyData,
   timeDomainData: _timeDomainData,
   isActive: _isActive,

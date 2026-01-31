@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useAudio } from './audio/useAudio'
-import { ThreeScene } from './visualizers/three/ThreeScene'
+import { Visualizer } from './visualizers/Visualizer'
 
 import './App.css'
 
@@ -61,7 +61,7 @@ function App() {
   return (
     <div className="app" style={{ backgroundColor: BACKGROUND_COLOR }}>
       <div className="visualizer-container" style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT }}>
-        <ThreeScene
+        <Visualizer
           frequencyData={frequencyData}
           timeDomainData={timeDomainData}
           isActive={isActive}
