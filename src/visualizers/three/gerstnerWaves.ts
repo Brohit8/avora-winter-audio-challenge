@@ -28,6 +28,8 @@ const WAVES_PROCESSED = GERSTNER_WAVES.map((w, i) => {
   return { dx, dz, omega, amplitude, speed: w.speed, phase: i * 1.3 }
 })
 
+// Shaders
+
 export const waterVertexShader = `
   uniform float uTime;
   uniform float uPhaseOffset;
@@ -85,6 +87,8 @@ export const waterFragmentShader = `
     gl_FragColor = vec4(baseColor, 1.0);
   }
 `
+
+// CPU-side wave calculations
 
 /**
  * Calculate wave displacement at a world position.
