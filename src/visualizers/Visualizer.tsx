@@ -17,6 +17,7 @@ import { createWindSwirlSprites, updateWindSwirls, disposeWindSwirls } from './t
 import { createSandTerrain } from './three/sandTerrain'
 import { getGerstnerDisplacement, getGerstnerNormal } from './three/gerstnerWaves'
 import { createGutter, type GutterResources } from './three/gutter'
+import { enableShadows, applySailMaterial, makeUnlit } from './three/models'
 
 // =============================================================================
 // 3D Scene Layout (module-specific constants)
@@ -171,35 +172,21 @@ export function Visualizer({
     // === Load Models ===
     const loader = new GLTFLoader()
 
-    // Load finish line buoys (both on same visual side from camera)
-    // Use MeshBasicMaterial so colors are unaffected by lighting (true black/white)
+    // Load finish line buoys (unlit so checkered pattern ignores lighting)
     loader.load(
       '/models/buoy.glb',
       (gltf) => {
-        // Convert to unlit material for accurate vertex colors, enable shadow casting
-        const setupBuoy = (model: THREE.Group) => {
-          model.traverse((child) => {
-            if (child instanceof THREE.Mesh) {
-              // Replace with MeshBasicMaterial that uses vertex colors
-              child.material = new THREE.MeshBasicMaterial({
-                vertexColors: true,
-              })
-              child.castShadow = true
-            }
-          })
-        }
-
-        // Buoy at outer edge of top gutter (same visual side as bottom buoy)
         const buoy1 = gltf.scene.clone()
-        setupBuoy(buoy1)
+        makeUnlit(buoy1)
+        enableShadows(buoy1, true, false)
         buoy1.position.set(BUOY_X, 0.1, GUTTER1_Z - 0.6)
         buoy1.scale.set(0.36, 0.36, 0.36)
         scene.add(buoy1)
         buoy1Ref.current = buoy1
 
-        // Buoy at inner edge of bottom gutter
         const buoy2 = gltf.scene.clone()
-        setupBuoy(buoy2)
+        makeUnlit(buoy2)
+        enableShadows(buoy2, true, false)
         buoy2.position.set(BUOY_X, 0.1, GUTTER2_Z - 0.6)
         buoy2.scale.set(0.36, 0.36, 0.36)
         scene.add(buoy2)
@@ -225,21 +212,10 @@ export function Visualizer({
     loader.load(
       '/models/regatta_boat.glb',
       (gltf) => {
-        const isSailMesh = (mesh: THREE.Mesh) => {
-          return mesh.name.includes('Sail') || mesh.parent?.name.includes('Sail')
-        }
-
         // Red boat (top gutter)
         const redBoat = gltf.scene.clone()
-        redBoat.traverse((child) => {
-          if (child instanceof THREE.Mesh) {
-            child.castShadow = true
-            child.receiveShadow = true
-            if (isSailMesh(child)) {
-              child.material = redSailMaterial
-            }
-          }
-        })
+        enableShadows(redBoat)
+        applySailMaterial(redBoat, redSailMaterial)
         redBoat.position.set(RACE_START_X, BOAT_BASE_Y, GUTTER1_Z)
         redBoat.scale.set(0.5, 0.5, 0.5)
         redBoat.rotation.y = Math.PI / 2
@@ -248,15 +224,8 @@ export function Visualizer({
 
         // Blue boat (bottom gutter)
         const blueBoat = gltf.scene.clone()
-        blueBoat.traverse((child) => {
-          if (child instanceof THREE.Mesh) {
-            child.castShadow = true
-            child.receiveShadow = true
-            if (isSailMesh(child)) {
-              child.material = blueSailMaterial
-            }
-          }
-        })
+        enableShadows(blueBoat)
+        applySailMaterial(blueBoat, blueSailMaterial)
         blueBoat.position.set(RACE_START_X, BOAT_BASE_Y, GUTTER2_Z)
         blueBoat.scale.set(0.5, 0.5, 0.5)
         blueBoat.rotation.y = Math.PI / 2
