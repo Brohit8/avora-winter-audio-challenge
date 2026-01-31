@@ -22,7 +22,10 @@ import {
   getGerstnerNormal,
 } from './gerstnerWaves'
 
-// Race boundaries (X positions in 3D space)
+// =============================================================================
+// 3D Scene Layout (module-specific constants)
+// =============================================================================
+
 const RACE_START_X = -4
 
 // Buoy position (finish line) - positioned toward end of gutter
