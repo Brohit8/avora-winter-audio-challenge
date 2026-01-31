@@ -5,8 +5,6 @@ import type { VisualizerProps, Screen, FrequencyRange, BoatColor } from './types
 import {
   COLORS,
   DEFAULT_RED_RANGE,
-  BASE_SPEED_MULTIPLIER,
-  WHISTLE_BOOST,
 } from './constants'
 import { getFrequencyAverage } from './utils/audio'
 import { SetupOverlay } from './components/SetupOverlay'
@@ -38,6 +36,9 @@ const GUTTER_PHASE = 0.0
 const DEFAULT_CAMERA_POS = new THREE.Vector3(0, 5, 10)
 const DEFAULT_CAMERA_TARGET = new THREE.Vector3(0, 0, 0)
 
+// World scroll speed (units per second)
+const WORLD_SCROLL_SPEED = 3
+
 /**
  * Visualizer - Three.js boat race visualizer with game logic
  */
@@ -65,11 +66,15 @@ export function Visualizer({
   const waterMaterialRef = useRef<THREE.ShaderMaterial | null>(null)
   const windSwirlsRef = useRef<THREE.Sprite[]>([])
   const waveTimeOriginRef = useRef<number>(0)
+  const worldOffsetRef = useRef<number>(0)
+  const lastFrameTimeRef = useRef<number>(0)
 
   // Game actions
   const handleStartRace = useCallback(() => {
-    // Reset boat position when starting countdown
+    // Reset boat position and world offset when starting countdown
     if (boatRef.current) boatRef.current.position.x = BOAT_X
+    worldOffsetRef.current = 0
+    lastFrameTimeRef.current = 0
     setScreen('countdown')
     setWinner(null)
   }, [])
@@ -252,21 +257,31 @@ export function Visualizer({
         boat.rotation.x = Math.asin(normal.nz) * 0.5    // Pitch
       }
 
-      // During race, update boat position from audio data
-      if (screen === 'race' && frequencyData.current && boat) {
-        const speed = getFrequencyAverage(frequencyData.current, redRange.start, redRange.end)
+      // During race, update world offset at constant rate
+      if (screen === 'race') {
+        // Calculate delta time
+        const currentTime = performance.now()
+        if (lastFrameTimeRef.current === 0) {
+          lastFrameTimeRef.current = currentTime
+        }
+        const deltaTime = (currentTime - lastFrameTimeRef.current) / 1000
+        lastFrameTimeRef.current = currentTime
 
-        boat.position.x += speed * BASE_SPEED_MULTIPLIER * WHISTLE_BOOST
+        // Increment world offset (for obstacle positioning and score)
+        worldOffsetRef.current += WORLD_SCROLL_SPEED * deltaTime
 
-        // Update wind swirls based on audio loudness
-        updateWindSwirls(
-          windSwirlsRef.current,
-          boat.position.x,
-          boat.position.y,
-          boat.position.z,
-          speed,
-          elapsed
-        )
+        // Update wind swirls (positioned relative to boat)
+        if (frequencyData.current && boat) {
+          const speed = getFrequencyAverage(frequencyData.current, redRange.start, redRange.end)
+          updateWindSwirls(
+            windSwirlsRef.current,
+            boat.position.x,
+            boat.position.y,
+            boat.position.z,
+            speed,
+            elapsed
+          )
+        }
       } else {
         // Hide wind swirls when not racing
         windSwirlsRef.current.forEach(sprite => sprite.visible = false)
