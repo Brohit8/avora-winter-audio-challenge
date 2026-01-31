@@ -14,6 +14,7 @@ import { getFrequencyAverage } from '../utils/audio'
 import { SetupOverlay } from '../components/SetupOverlay'
 import { WinnerOverlay } from '../components/WinnerOverlay'
 import { createWindSwirlSprites, updateWindSwirls, disposeWindSwirls } from './windSwirls'
+import { createSandTerrain } from './sandTerrain'
 
 // Race boundaries (X positions in 3D space)
 const RACE_START_X = -4
@@ -249,9 +250,13 @@ export function ThreeScene({
 
     // === Scene Setup ===
     const scene = new THREE.Scene()
-    // Warm sky gradient - matches hemisphere light sky color
-    scene.background = new THREE.Color(0x87CEEB)
+    // Warm beach sky color
+    scene.background = new THREE.Color(0x7EC8E3)
     sceneRef.current = scene
+
+    // === Sand Terrain with Bumps ===
+    const { mesh: sand, geometry: sandGeometry, material: sandMaterial } = createSandTerrain()
+    scene.add(sand)
 
     // === Camera Setup ===
     const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000)
@@ -497,6 +502,8 @@ export function ThreeScene({
 
     // === Cleanup ===
     return () => {
+      sandGeometry.dispose()
+      sandMaterial.dispose()
       waterGeometry.dispose()
       waterMaterial1.dispose()
       waterMaterial2.dispose()
