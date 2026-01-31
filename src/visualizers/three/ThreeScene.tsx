@@ -21,7 +21,7 @@ const RACE_START_X = -4
 const BUOY_X = 5.25
 
 // Boat hull tip offset from center (measured from bounding box: max.z * 0.5 scale)
-const BOAT_FRONT_OFFSET = 1.3
+const BOAT_FRONT_OFFSET = 1
 
 // Boat base Y position (lower = more submerged, higher = floating)
 const BOAT_BASE_Y = 0.25
@@ -363,6 +363,40 @@ export function ThreeScene({
     gutter2Right.receiveShadow = true
     scene.add(gutter2Right)
 
+    // Gutter bottoms (prevents seeing background through wave troughs)
+    // Width is 1.6 to cover the full span including wall thickness (1.5 inner + 0.1 walls)
+    const gutterBottomGeometry = new THREE.BoxGeometry(12, 0.05, 1.6)
+    const gutter1Bottom = new THREE.Mesh(gutterBottomGeometry, gutterSideMaterial)
+    gutter1Bottom.position.set(0, 0, GUTTER1_Z)
+    gutter1Bottom.receiveShadow = true
+    scene.add(gutter1Bottom)
+    const gutter2Bottom = new THREE.Mesh(gutterBottomGeometry, gutterSideMaterial)
+    gutter2Bottom.position.set(0, 0, GUTTER2_Z)
+    gutter2Bottom.receiveShadow = true
+    scene.add(gutter2Bottom)
+
+    // Gutter end caps (front and back)
+    // Width is 1.6 to cover the full span including wall thickness (1.5 inner + 0.1 walls)
+    const gutterEndCapGeometry = new THREE.BoxGeometry(0.1, 0.3, 1.6)
+    // Gutter 1 end caps
+    const gutter1Front = new THREE.Mesh(gutterEndCapGeometry, gutterSideMaterial)
+    gutter1Front.position.set(-6, 0.15, GUTTER1_Z)
+    gutter1Front.receiveShadow = true
+    scene.add(gutter1Front)
+    const gutter1Back = new THREE.Mesh(gutterEndCapGeometry, gutterSideMaterial)
+    gutter1Back.position.set(6, 0.15, GUTTER1_Z)
+    gutter1Back.receiveShadow = true
+    scene.add(gutter1Back)
+    // Gutter 2 end caps
+    const gutter2Front = new THREE.Mesh(gutterEndCapGeometry, gutterSideMaterial)
+    gutter2Front.position.set(-6, 0.15, GUTTER2_Z)
+    gutter2Front.receiveShadow = true
+    scene.add(gutter2Front)
+    const gutter2Back = new THREE.Mesh(gutterEndCapGeometry, gutterSideMaterial)
+    gutter2Back.position.set(6, 0.15, GUTTER2_Z)
+    gutter2Back.receiveShadow = true
+    scene.add(gutter2Back)
+
     // === Load Models ===
     const loader = new GLTFLoader()
 
@@ -455,6 +489,8 @@ export function ThreeScene({
       waterMaterial1.dispose()
       waterMaterial2.dispose()
       gutterSideGeometry.dispose()
+      gutterBottomGeometry.dispose()
+      gutterEndCapGeometry.dispose()
       gutterSideMaterial.dispose()
       redSailMaterial.dispose()
       blueSailMaterial.dispose()
