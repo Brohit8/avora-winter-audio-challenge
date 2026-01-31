@@ -59,6 +59,7 @@ export function Visualizer({
   frequencyData,
   timeDomainData: _timeDomainData,
   isActive: _isActive,
+  onRequestMic,
 }: VisualizerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -480,6 +481,7 @@ export function Visualizer({
           onBoat1RangeChange={setRedRange}
           onBoat2RangeChange={setBlueRange}
           onStartRace={handleStartRace}
+          onRequestMic={onRequestMic}
         />
       )}
 

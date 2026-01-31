@@ -15,4 +15,5 @@ export interface VisualizerProps {
   frequencyData: RefObject<Uint8Array<ArrayBufferLike>>
   timeDomainData: RefObject<Uint8Array<ArrayBufferLike>>
   isActive: boolean
+  onRequestMic: () => Promise<void>
 }
