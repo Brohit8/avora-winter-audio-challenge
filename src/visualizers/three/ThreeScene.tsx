@@ -125,16 +125,17 @@ const waterFragmentShader = `
   varying vec3 vNormal;
 
   void main() {
-    // Base ocean blue
-    vec3 baseColor = mix(uDeepColor, uColor, 0.7);
+    // Mix between deep and main color based on height
+    float depthFactor = clamp(vWaveHeight * 8.0 + 0.5, 0.0, 1.0);
+    vec3 baseColor = mix(uDeepColor, uColor, depthFactor);
 
-    // Wave height shading - lighter on crests, darker in troughs
-    float heightFactor = clamp(vWaveHeight * 6.0 + 0.5, 0.0, 1.0);
-    baseColor = mix(baseColor, uHighlightColor, heightFactor * 0.25);
+    // White foam on wave crests - stronger effect
+    float crestFactor = clamp(vWaveHeight * 12.0 - 0.3, 0.0, 1.0);
+    baseColor = mix(baseColor, uHighlightColor, crestFactor * 0.6);
 
-    // Subtle specular highlight based on surface normal facing up
-    float specular = pow(max(0.0, vNormal.y), 4.0);
-    baseColor = mix(baseColor, uHighlightColor, specular * 0.15);
+    // Specular highlight for extra foam shine
+    float specular = pow(max(0.0, vNormal.y), 3.0);
+    baseColor = mix(baseColor, uHighlightColor, specular * 0.3);
 
     gl_FragColor = vec4(baseColor, 1.0);
   }
@@ -250,12 +251,18 @@ export function ThreeScene({
 
     // === Scene Setup ===
     const scene = new THREE.Scene()
-    // Warm beach sky color
-    scene.background = new THREE.Color(0x7EC8E3)
+    scene.background = new THREE.Color(0xc7e8ef)
     sceneRef.current = scene
 
     // === Sand Terrain with Bumps ===
-    const { mesh: sand, geometry: sandGeometry, material: sandMaterial } = createSandTerrain()
+    // Large enough that edges are outside the camera's visible area
+    // (including after win animation camera pan to x=9.25, y=1.05)
+    const { mesh: sand, geometry: sandGeometry, material: sandMaterial } = createSandTerrain({
+      width: 150,
+      depth: 120,
+      segmentsX: 150,
+      segmentsZ: 120,
+    })
     scene.add(sand)
 
     // === Camera Setup ===
@@ -276,9 +283,9 @@ export function ThreeScene({
     // === Lighting ===
     // Hemisphere light for natural ambient fill (sky to ground gradient)
     const hemisphereLight = new THREE.HemisphereLight(
-      0x87CEEB,  // Sky color (light blue)
-      0xE8C872,  // Ground color (warm sand/earth)
-      0.7
+      0xc7e8ef,  // Sky color
+      0xffeab3,  // Ground color (sand)
+      0.8
     )
     scene.add(hemisphereLight)
 
@@ -299,9 +306,9 @@ export function ThreeScene({
     scene.add(directionalLight)
 
     // === Gutters (water channels with Gerstner wave shader) ===
-    const waterColor = new THREE.Color(0x1e6091)      // Medium ocean blue
-    const highlightColor = new THREE.Color(0x5ba3c6)  // Lighter blue for highlights
-    const deepColor = new THREE.Color(0x14405f)       // Darker blue for troughs
+    const waterColor = new THREE.Color(0x00abbf)      // Main water
+    const highlightColor = new THREE.Color(0xffffff)  // White foam on wave crests
+    const deepColor = new THREE.Color(0x01b3bf)       // Bright teal for troughs
 
     // Water plane geometry with segments for smooth Gerstner displacement
     const waterGeometry = new THREE.PlaneGeometry(12, 1.5, 64, 16)
@@ -409,12 +416,26 @@ export function ThreeScene({
     const loader = new GLTFLoader()
 
     // Load finish line buoys (both on same visual side from camera)
-    // Shadows disabled - thin flag geometry causes artifacts
+    // Use MeshBasicMaterial so colors are unaffected by lighting (true black/white)
     loader.load(
       '/models/buoy.glb',
       (gltf) => {
+        // Convert to unlit material for accurate vertex colors, enable shadow casting
+        const setupBuoy = (model: THREE.Group) => {
+          model.traverse((child) => {
+            if (child instanceof THREE.Mesh) {
+              // Replace with MeshBasicMaterial that uses vertex colors
+              child.material = new THREE.MeshBasicMaterial({
+                vertexColors: true,
+              })
+              child.castShadow = true
+            }
+          })
+        }
+
         // Buoy at outer edge of top gutter (same visual side as bottom buoy)
         const buoy1 = gltf.scene.clone()
+        setupBuoy(buoy1)
         buoy1.position.set(BUOY_X, 0.1, GUTTER1_Z - 0.6)
         buoy1.scale.set(0.36, 0.36, 0.36)
         scene.add(buoy1)
@@ -422,6 +443,7 @@ export function ThreeScene({
 
         // Buoy at inner edge of bottom gutter
         const buoy2 = gltf.scene.clone()
+        setupBuoy(buoy2)
         buoy2.position.set(BUOY_X, 0.1, GUTTER2_Z - 0.6)
         buoy2.scale.set(0.36, 0.36, 0.36)
         scene.add(buoy2)

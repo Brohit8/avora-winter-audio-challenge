@@ -68,8 +68,8 @@ const DEFAULT_CONFIG: SandTerrainConfig = {
   depth: 20,
   segmentsX: 60,
   segmentsZ: 40,
-  bumpHeight: 0.15,
-  bumpScale: 0.8,
+  bumpHeight: 0.35,   // Increased for more visible dunes
+  bumpScale: 0.5,     // Larger features for better visibility
   flattenCenter: true,
 }
 
@@ -121,8 +121,8 @@ export function createSandGeometry(config: Partial<SandTerrainConfig> = {}): THR
  */
 export function createSandMaterial(): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({
-    color: 0xE8D4A8,  // Sandy beige
-    roughness: 0.95,
+    color: 0xffeab3,  // Warm peachy sand
+    roughness: 0.85,
     metalness: 0.0,
   })
 }
