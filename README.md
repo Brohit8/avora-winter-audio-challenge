@@ -2,14 +2,14 @@
 
 Create your own novel audio visualization using real-time microphone input.
 
-## Rohit's Visualization: Sonic Raingutter Regatta
+## Rohit's Visualization #2: Sonic Surf
 
-Summary: A real-time audio visualizer where two boats race down parallel rain gutters. Each boat is mapped to a frequency range. When the microphone detects sound in a particular boat's range, it generates "wind" that propels the respective boat forward. The louder the signal, the faster the boat. The first boat to cross the finish line wins.
+Summary: A real-time audio visualizer where your boat rides an endless wave while obstacles approach. Use your voice to control the boat — higher pitched sounds make the boat jump over obstacles, while lower pitched sounds make the boat duck under them. Dodge as many obstacles as possible to achieve the highest score!
 
 How to Play:
-1. **Setup** — Drag the sliders to assign each boat (Red and Blue) a frequency range. Hit "Start" to begin racing. 
-2. **Race** — Sound in a boat's frequency range creates "wind" which propels it forward. The first boat to cross the finish line wins. 
-3. **Winner** — See which boat won. Hit "Race Again" to rematch.
+1. **Setup** — Drag the sliders to configure which frequency ranges make the boat jump and duck. Hit "Start" to begin surfing.
+2. **Surf** — Obstacles will approach your boat. Make high-pitched sounds to jump over low obstacles, or low-pitched sounds to duck under high obstacles.
+3. **Game Over** — See how far you made it. Hit "Play Again" to try for a higher score!
 
 ## Quick Start
 
