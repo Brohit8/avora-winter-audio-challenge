@@ -39,6 +39,11 @@ const DEFAULT_CAMERA_TARGET = new THREE.Vector3(0, 0, 0)
 // World scroll speed (units per second)
 const WORLD_SCROLL_SPEED = 3
 
+// Jump physics (Chrome dino style)
+const JUMP_VELOCITY = 8        // Initial upward velocity
+const GRAVITY = 25             // Downward acceleration
+const JUMP_THRESHOLD = 0.15    // Loudness threshold to trigger jump
+
 /**
  * Visualizer - Three.js boat race visualizer with game logic
  */
@@ -68,6 +73,8 @@ export function Visualizer({
   const waveTimeOriginRef = useRef<number>(0)
   const worldOffsetRef = useRef<number>(0)
   const lastFrameTimeRef = useRef<number>(0)
+  const boatVelocityYRef = useRef<number>(0)
+  const isJumpingRef = useRef<boolean>(false)
 
   // Game actions
   const handleStartRace = useCallback(() => {
@@ -75,6 +82,9 @@ export function Visualizer({
     if (boatRef.current) boatRef.current.position.x = BOAT_X
     worldOffsetRef.current = 0
     lastFrameTimeRef.current = 0
+    // Reset jump state
+    boatVelocityYRef.current = 0
+    isJumpingRef.current = false
     setScreen('countdown')
     setWinner(null)
   }, [])
@@ -248,8 +258,40 @@ export function Visualizer({
         const disp = getGerstnerDisplacement(boat.position.x, GUTTER_Z, elapsed, GUTTER_PHASE)
         const normal = getGerstnerNormal(boat.position.x, GUTTER_Z, elapsed, GUTTER_PHASE)
 
-        // Apply vertical displacement (horizontal displacement already in shader)
-        boat.position.y = BOAT_BASE_Y + disp.dy
+        // Water surface level (base + wave displacement)
+        const waterLevel = BOAT_BASE_Y + disp.dy
+
+        // Jump physics (only during race)
+        if (screen === 'race') {
+          // Check for jump trigger
+          if (frequencyData.current && !isJumpingRef.current) {
+            const loudness = getFrequencyAverage(frequencyData.current, redRange.start, redRange.end)
+            if (loudness > JUMP_THRESHOLD) {
+              isJumpingRef.current = true
+              boatVelocityYRef.current = JUMP_VELOCITY
+            }
+          }
+
+          // Apply jump physics when in air
+          if (isJumpingRef.current) {
+            const dt = 1 / 60  // Approximate frame time
+            boatVelocityYRef.current -= GRAVITY * dt
+            boat.position.y += boatVelocityYRef.current * dt
+
+            // Land when hitting water
+            if (boat.position.y <= waterLevel) {
+              boat.position.y = waterLevel
+              boatVelocityYRef.current = 0
+              isJumpingRef.current = false
+            }
+          } else {
+            // Float on water when not jumping
+            boat.position.y = waterLevel
+          }
+        } else {
+          // Not racing - just float on water
+          boat.position.y = waterLevel
+        }
 
         // Derive rotation from surface normal
         // Normal tilted in X → roll (rotation.z), Normal tilted in Z → pitch (rotation.x)
