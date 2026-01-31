@@ -5,10 +5,8 @@ import type { VisualizerProps, Screen, FrequencyRange, BoatColor } from './types
 import {
   COLORS,
   DEFAULT_RED_RANGE,
-  DEFAULT_BLUE_RANGE,
   BASE_SPEED_MULTIPLIER,
   WHISTLE_BOOST,
-  SINGING_BOOST,
 } from './constants'
 import { getFrequencyAverage } from './utils/audio'
 import { SetupOverlay } from './components/SetupOverlay'
@@ -35,13 +33,11 @@ const BOAT_FRONT_OFFSET = 1
 // Boat base Y position (lower = more submerged, higher = floating)
 const BOAT_BASE_Y = 0.25
 
-// Gutter positions (z-axis)
-const GUTTER1_Z = -1.5  // Top gutter (red boat)
-const GUTTER2_Z = 1.5   // Bottom gutter (blue boat)
+// Gutter position (z-axis) - single centered gutter
+const GUTTER_Z = 0
 
-// Wave phase offsets give each gutter different wave patterns
-const GUTTER1_PHASE = 0.0
-const GUTTER2_PHASE = 3.7
+// Wave phase offset
+const GUTTER_PHASE = 0.0
 
 // Camera animation settings
 const CAMERA_ANIMATION_DURATION = 2000 // 2 seconds in ms
@@ -70,29 +66,23 @@ export function Visualizer({
   // Game state
   const [screen, setScreen] = useState<Screen>('setup')
   const [redRange, setRedRange] = useState<FrequencyRange>(DEFAULT_RED_RANGE)
-  const [blueRange, setBlueRange] = useState<FrequencyRange>(DEFAULT_BLUE_RANGE)
   const [winner, setWinner] = useState<BoatColor | null>(null)
 
   // Three.js object refs (shared between effects)
   const sceneRef = useRef<THREE.Scene | null>(null)
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null)
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
-  const redBoatRef = useRef<THREE.Group | null>(null)
-  const blueBoatRef = useRef<THREE.Group | null>(null)
-  const buoy1Ref = useRef<THREE.Group | null>(null)
-  const buoy2Ref = useRef<THREE.Group | null>(null)
-  const waterMaterial1Ref = useRef<THREE.ShaderMaterial | null>(null)
-  const waterMaterial2Ref = useRef<THREE.ShaderMaterial | null>(null)
-  const redSwirlsRef = useRef<THREE.Sprite[]>([])
-  const blueSwirlsRef = useRef<THREE.Sprite[]>([])
+  const boatRef = useRef<THREE.Group | null>(null)
+  const buoyRef = useRef<THREE.Group | null>(null)
+  const waterMaterialRef = useRef<THREE.ShaderMaterial | null>(null)
+  const windSwirlsRef = useRef<THREE.Sprite[]>([])
   const animationStartTimeRef = useRef<number>(0)
   const waveTimeOriginRef = useRef<number>(0)
 
   // Game actions
   const handleStartRace = useCallback(() => {
-    // Reset boat positions when starting countdown
-    if (redBoatRef.current) redBoatRef.current.position.x = RACE_START_X
-    if (blueBoatRef.current) blueBoatRef.current.position.x = RACE_START_X
+    // Reset boat position when starting countdown
+    if (boatRef.current) boatRef.current.position.x = RACE_START_X
     setScreen('countdown')
     setWinner(null)
   }, [])
@@ -170,34 +160,24 @@ export function Visualizer({
     directionalLight.shadow.camera.bottom = -10
     scene.add(directionalLight)
 
-    // === Gutters (water channels) ===
-    const gutter1 = createGutter(scene, GUTTER1_Z, GUTTER1_PHASE)
-    const gutter2 = createGutter(scene, GUTTER2_Z, GUTTER2_PHASE)
-    waterMaterial1Ref.current = gutter1.waterMaterial
-    waterMaterial2Ref.current = gutter2.waterMaterial
+    // === Gutter (water channel) ===
+    const gutter = createGutter(scene, GUTTER_Z, GUTTER_PHASE)
+    waterMaterialRef.current = gutter.waterMaterial
 
     // === Load Models ===
     const loader = new GLTFLoader()
 
-    // Load finish line buoys (unlit so checkered pattern ignores lighting)
+    // Load finish line buoy (unlit so checkered pattern ignores lighting)
     loader.load(
       '/models/buoy.glb',
       (gltf) => {
-        const buoy1 = gltf.scene.clone()
-        makeUnlit(buoy1)
-        enableShadows(buoy1, true, false)
-        buoy1.position.set(BUOY_X, 0.1, GUTTER1_Z - 0.6)
-        buoy1.scale.set(0.36, 0.36, 0.36)
-        scene.add(buoy1)
-        buoy1Ref.current = buoy1
-
-        const buoy2 = gltf.scene.clone()
-        makeUnlit(buoy2)
-        enableShadows(buoy2, true, false)
-        buoy2.position.set(BUOY_X, 0.1, GUTTER2_Z - 0.6)
-        buoy2.scale.set(0.36, 0.36, 0.36)
-        scene.add(buoy2)
-        buoy2Ref.current = buoy2
+        const buoy = gltf.scene.clone()
+        makeUnlit(buoy)
+        enableShadows(buoy, true, false)
+        buoy.position.set(BUOY_X, 0.1, GUTTER_Z - 0.6)
+        buoy.scale.set(0.36, 0.36, 0.36)
+        scene.add(buoy)
+        buoyRef.current = buoy
       },
       undefined,
       (error) => {
@@ -205,13 +185,8 @@ export function Visualizer({
       }
     )
 
-    const redSailMaterial = new THREE.MeshStandardMaterial({
+    const sailMaterial = new THREE.MeshStandardMaterial({
       color: COLORS.red.primary,
-      metalness: 0.0,
-      roughness: 0.9,
-    })
-    const blueSailMaterial = new THREE.MeshStandardMaterial({
-      color: COLORS.blue.primary,
       metalness: 0.0,
       roughness: 0.9,
     })
@@ -219,25 +194,14 @@ export function Visualizer({
     loader.load(
       '/models/regatta_boat.glb',
       (gltf) => {
-        // Red boat (top gutter)
-        const redBoat = gltf.scene.clone()
-        enableShadows(redBoat)
-        applySailMaterial(redBoat, redSailMaterial)
-        redBoat.position.set(RACE_START_X, BOAT_BASE_Y, GUTTER1_Z)
-        redBoat.scale.set(0.5, 0.5, 0.5)
-        redBoat.rotation.y = Math.PI / 2
-        scene.add(redBoat)
-        redBoatRef.current = redBoat
-
-        // Blue boat (bottom gutter)
-        const blueBoat = gltf.scene.clone()
-        enableShadows(blueBoat)
-        applySailMaterial(blueBoat, blueSailMaterial)
-        blueBoat.position.set(RACE_START_X, BOAT_BASE_Y, GUTTER2_Z)
-        blueBoat.scale.set(0.5, 0.5, 0.5)
-        blueBoat.rotation.y = Math.PI / 2
-        scene.add(blueBoat)
-        blueBoatRef.current = blueBoat
+        const boat = gltf.scene.clone()
+        enableShadows(boat)
+        applySailMaterial(boat, sailMaterial)
+        boat.position.set(RACE_START_X, BOAT_BASE_Y, GUTTER_Z)
+        boat.scale.set(0.5, 0.5, 0.5)
+        boat.rotation.y = Math.PI / 2
+        scene.add(boat)
+        boatRef.current = boat
       },
       undefined,
       (error) => {
@@ -246,13 +210,9 @@ export function Visualizer({
     )
 
     // === Wind Swirl Sprites ===
-    const redSwirls = createWindSwirlSprites(5)
-    redSwirls.forEach(sprite => scene.add(sprite))
-    redSwirlsRef.current = redSwirls
-
-    const blueSwirls = createWindSwirlSprites(5)
-    blueSwirls.forEach(sprite => scene.add(sprite))
-    blueSwirlsRef.current = blueSwirls
+    const windSwirls = createWindSwirlSprites(5)
+    windSwirls.forEach(sprite => scene.add(sprite))
+    windSwirlsRef.current = windSwirls
 
     // === Resize Handling ===
     const handleResize = () => {
@@ -270,23 +230,16 @@ export function Visualizer({
       window.removeEventListener('resize', handleResize)
       sandGeometry.dispose()
       sandMaterial.dispose()
-      gutter1.dispose()
-      gutter2.dispose()
-      redSailMaterial.dispose()
-      blueSailMaterial.dispose()
+      gutter.dispose()
+      sailMaterial.dispose()
 
-      if (redBoatRef.current) scene.remove(redBoatRef.current)
-      if (blueBoatRef.current) scene.remove(blueBoatRef.current)
-      if (buoy1Ref.current) scene.remove(buoy1Ref.current)
-      if (buoy2Ref.current) scene.remove(buoy2Ref.current)
+      if (boatRef.current) scene.remove(boatRef.current)
+      if (buoyRef.current) scene.remove(buoyRef.current)
 
       // Cleanup wind swirls
-      redSwirlsRef.current.forEach(sprite => scene.remove(sprite))
-      blueSwirlsRef.current.forEach(sprite => scene.remove(sprite))
-      disposeWindSwirls(redSwirlsRef.current)
-      disposeWindSwirls(blueSwirlsRef.current)
-      redSwirlsRef.current = []
-      blueSwirlsRef.current = []
+      windSwirlsRef.current.forEach(sprite => scene.remove(sprite))
+      disposeWindSwirls(windSwirlsRef.current)
+      windSwirlsRef.current = []
 
       renderer.dispose()
       container.removeChild(renderer.domElement)
@@ -294,12 +247,9 @@ export function Visualizer({
       sceneRef.current = null
       cameraRef.current = null
       rendererRef.current = null
-      redBoatRef.current = null
-      blueBoatRef.current = null
-      buoy1Ref.current = null
-      buoy2Ref.current = null
-      waterMaterial1Ref.current = null
-      waterMaterial2Ref.current = null
+      boatRef.current = null
+      buoyRef.current = null
+      waterMaterialRef.current = null
     }
   }, [])
 
@@ -313,105 +263,67 @@ export function Visualizer({
     let frameId: number
 
     function animate() {
-      const redBoat = redBoatRef.current
-      const blueBoat = blueBoatRef.current
-      const waterMat1 = waterMaterial1Ref.current
-      const waterMat2 = waterMaterial2Ref.current
+      const boat = boatRef.current
+      const waterMat = waterMaterialRef.current
 
       // Use stable time reference for wave animation (prevents snapping on state changes)
       const elapsed = (performance.now() - waveTimeOriginRef.current) / 1000
-      if (waterMat1) waterMat1.uniforms.uTime.value = elapsed
-      if (waterMat2) waterMat2.uniforms.uTime.value = elapsed
+      if (waterMat) waterMat.uniforms.uTime.value = elapsed
 
       // Apply boat rocking synced to Gerstner waves
-      if (redBoat) {
-        // Get Gerstner displacement at boat position (red boat in gutter 1)
-        const disp = getGerstnerDisplacement(redBoat.position.x, GUTTER1_Z, elapsed, GUTTER1_PHASE)
-        const normal = getGerstnerNormal(redBoat.position.x, GUTTER1_Z, elapsed, GUTTER1_PHASE)
+      if (boat) {
+        // Get Gerstner displacement at boat position
+        const disp = getGerstnerDisplacement(boat.position.x, GUTTER_Z, elapsed, GUTTER_PHASE)
+        const normal = getGerstnerNormal(boat.position.x, GUTTER_Z, elapsed, GUTTER_PHASE)
 
         // Apply vertical displacement (horizontal displacement already in shader)
-        redBoat.position.y = BOAT_BASE_Y + disp.dy
+        boat.position.y = BOAT_BASE_Y + disp.dy
 
         // Derive rotation from surface normal
         // Normal tilted in X → roll (rotation.z), Normal tilted in Z → pitch (rotation.x)
-        redBoat.rotation.z = Math.asin(-normal.nx) * 0.6   // Roll
-        redBoat.rotation.x = Math.asin(normal.nz) * 0.5    // Pitch
-      }
-
-      if (blueBoat) {
-        // Blue boat in gutter 2, with different phase
-        const disp = getGerstnerDisplacement(blueBoat.position.x, GUTTER2_Z, elapsed, GUTTER2_PHASE)
-        const normal = getGerstnerNormal(blueBoat.position.x, GUTTER2_Z, elapsed, GUTTER2_PHASE)
-
-        blueBoat.position.y = BOAT_BASE_Y + disp.dy
-        blueBoat.rotation.z = Math.asin(-normal.nx) * 0.6
-        blueBoat.rotation.x = Math.asin(normal.nz) * 0.5
+        boat.rotation.z = Math.asin(-normal.nx) * 0.6   // Roll
+        boat.rotation.x = Math.asin(normal.nz) * 0.5    // Pitch
       }
 
       // Apply buoy rocking synced to Gerstner waves
-      const buoy1 = buoy1Ref.current
-      const buoy2 = buoy2Ref.current
+      const buoy = buoyRef.current
 
-      if (buoy1) {
-        const disp = getGerstnerDisplacement(BUOY_X, GUTTER1_Z - 0.6, elapsed, GUTTER1_PHASE)
-        const normal = getGerstnerNormal(BUOY_X, GUTTER1_Z - 0.6, elapsed, GUTTER1_PHASE)
-        buoy1.position.y = 0.1 + disp.dy
-        buoy1.rotation.z = Math.asin(-normal.nx) * 0.4
-        buoy1.rotation.x = Math.asin(normal.nz) * 0.4
+      if (buoy) {
+        const disp = getGerstnerDisplacement(BUOY_X, GUTTER_Z - 0.6, elapsed, GUTTER_PHASE)
+        const normal = getGerstnerNormal(BUOY_X, GUTTER_Z - 0.6, elapsed, GUTTER_PHASE)
+        buoy.position.y = 0.1 + disp.dy
+        buoy.rotation.z = Math.asin(-normal.nx) * 0.4
+        buoy.rotation.x = Math.asin(normal.nz) * 0.4
       }
 
-      if (buoy2) {
-        const disp = getGerstnerDisplacement(BUOY_X, GUTTER2_Z - 0.6, elapsed, GUTTER2_PHASE)
-        const normal = getGerstnerNormal(BUOY_X, GUTTER2_Z - 0.6, elapsed, GUTTER2_PHASE)
-        buoy2.position.y = 0.1 + disp.dy
-        buoy2.rotation.z = Math.asin(-normal.nx) * 0.4
-        buoy2.rotation.x = Math.asin(normal.nz) * 0.4
-      }
+      // During race, update boat position from audio data
+      if (screen === 'race' && frequencyData.current && boat) {
+        const speed = getFrequencyAverage(frequencyData.current, redRange.start, redRange.end)
 
-      // During race, update boat positions from audio data
-      if (screen === 'race' && frequencyData.current && redBoat && blueBoat) {
-        const redSpeed = getFrequencyAverage(frequencyData.current, redRange.start, redRange.end)
-        const blueSpeed = getFrequencyAverage(frequencyData.current, blueRange.start, blueRange.end)
-
-        redBoat.position.x += redSpeed * BASE_SPEED_MULTIPLIER * WHISTLE_BOOST
-        blueBoat.position.x += blueSpeed * BASE_SPEED_MULTIPLIER * SINGING_BOOST
+        boat.position.x += speed * BASE_SPEED_MULTIPLIER * WHISTLE_BOOST
 
         // Update wind swirls based on audio loudness
         updateWindSwirls(
-          redSwirlsRef.current,
-          redBoat.position.x,
-          redBoat.position.y,
-          redBoat.position.z,
-          redSpeed,
-          elapsed
-        )
-        updateWindSwirls(
-          blueSwirlsRef.current,
-          blueBoat.position.x,
-          blueBoat.position.y,
-          blueBoat.position.z,
-          blueSpeed,
+          windSwirlsRef.current,
+          boat.position.x,
+          boat.position.y,
+          boat.position.z,
+          speed,
           elapsed
         )
 
         // Check for winner (front of boat crosses the buoy finish line)
-        const redFront = redBoat.position.x + BOAT_FRONT_OFFSET
-        const blueFront = blueBoat.position.x + BOAT_FRONT_OFFSET
+        const boatFront = boat.position.x + BOAT_FRONT_OFFSET
 
-        if (redFront >= BUOY_X || blueFront >= BUOY_X) {
-          if (redFront > blueFront) {
-            setWinner('red')
-          } else {
-            setWinner('blue')
-          }
+        if (boatFront >= BUOY_X) {
+          setWinner('red')
           // Start camera animation instead of showing winner immediately
           animationStartTimeRef.current = performance.now()
           setScreen('win_animation')
         }
       } else {
         // Hide wind swirls when not racing
-        redSwirlsRef.current.forEach(sprite => sprite.visible = false)
-        blueSwirlsRef.current.forEach(sprite => sprite.visible = false)
+        windSwirlsRef.current.forEach(sprite => sprite.visible = false)
       }
 
       // Camera pan animation during win_animation screen
@@ -420,8 +332,8 @@ export function Visualizer({
         const progress = Math.min(animationElapsed / CAMERA_ANIMATION_DURATION, 1)
         const easedProgress = easeOutCubic(progress)
 
-        // Calculate winner's position at finish line
-        const winnerZ = winner === 'red' ? GUTTER1_Z : GUTTER2_Z
+        // Calculate boat's position at finish line
+        const winnerZ = GUTTER_Z
         const boatY = BOAT_BASE_Y
 
         // Camera position: behind finish line, slightly elevated, centered on winner's lane
@@ -454,10 +366,9 @@ export function Visualizer({
         }
       }
 
-      // Reset boat positions and camera when in setup
-      if (screen === 'setup' && redBoat && blueBoat && camera) {
-        redBoat.position.x = RACE_START_X
-        blueBoat.position.x = RACE_START_X
+      // Reset boat position and camera when in setup
+      if (screen === 'setup' && boat && camera) {
+        boat.position.x = RACE_START_X
         // Reset camera to default position
         camera.position.copy(DEFAULT_CAMERA_POS)
         camera.lookAt(DEFAULT_CAMERA_TARGET)
@@ -473,7 +384,7 @@ export function Visualizer({
     return () => {
       cancelAnimationFrame(frameId)
     }
-  }, [screen, redRange, blueRange, frequencyData, winner])
+  }, [screen, redRange, frequencyData, winner])
 
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100dvh' }}>
@@ -481,10 +392,8 @@ export function Visualizer({
 
       {screen === 'setup' && (
         <SetupOverlay
-          boat1Range={redRange}
-          boat2Range={blueRange}
-          onBoat1RangeChange={setRedRange}
-          onBoat2RangeChange={setBlueRange}
+          boatRange={redRange}
+          onBoatRangeChange={setRedRange}
           onStartRace={handleStartRace}
           onRequestMic={onRequestMic}
         />

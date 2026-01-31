@@ -2,7 +2,7 @@ import type { RefObject } from 'react'
 
 // Game state
 export type Screen = 'setup' | 'countdown' | 'race' | 'win_animation' | 'winner'
-export type BoatColor = 'red' | 'blue'
+export type BoatColor = 'red'
 
 // Frequency range for boat assignment (FFT bin indices)
 export interface FrequencyRange {

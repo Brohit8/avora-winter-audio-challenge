@@ -2,10 +2,8 @@ import type { FrequencyRange } from '../types'
 import { FrequencySlider } from './FrequencySlider'
 
 interface SetupOverlayProps {
-  boat1Range: FrequencyRange
-  boat2Range: FrequencyRange
-  onBoat1RangeChange: (range: FrequencyRange) => void
-  onBoat2RangeChange: (range: FrequencyRange) => void
+  boatRange: FrequencyRange
+  onBoatRangeChange: (range: FrequencyRange) => void
   onStartRace: () => void
   onRequestMic: () => Promise<void>
 }
@@ -62,10 +60,8 @@ const buttonStyle: React.CSSProperties = {
 }
 
 export function SetupOverlay({
-  boat1Range,
-  boat2Range,
-  onBoat1RangeChange,
-  onBoat2RangeChange,
+  boatRange,
+  onBoatRangeChange,
   onStartRace,
   onRequestMic,
 }: SetupOverlayProps) {
@@ -76,29 +72,22 @@ export function SetupOverlay({
 
   return (
     <div style={overlayStyle}>
-      <h1 style={titleStyle}>Sonic Raingutter Regatta</h1>
+      <h1 style={titleStyle}>Sonic Surf</h1>
 
       <p style={instructionsStyle}>
-        Create wind with your voice!<br />
-        Louder = faster. Each boat catches a different pitch range.
+        Control your boat with your voice!<br />
+        High pitch = jump, Low pitch = duck.
       </p>
 
       <FrequencySlider
         color="red"
-        label="Red Boat"
-        range={boat1Range}
-        onRangeChange={onBoat1RangeChange}
-      />
-
-      <FrequencySlider
-        color="blue"
-        label="Blue Boat"
-        range={boat2Range}
-        onRangeChange={onBoat2RangeChange}
+        label="Boat"
+        range={boatRange}
+        onRangeChange={onBoatRangeChange}
       />
 
       <button style={buttonStyle} onClick={handleStartClick}>
-        Start Race
+        Start
       </button>
     </div>
   )

@@ -1,7 +1,7 @@
 import { COLORS } from '../constants'
 
 interface WinnerOverlayProps {
-  winner: 'red' | 'blue'
+  winner: 'red'
   onRaceAgain: () => void
 }
 
@@ -19,18 +19,18 @@ const overlayStyle: React.CSSProperties = {
   gap: '16px',
 }
 
-export function WinnerOverlay({ winner, onRaceAgain }: WinnerOverlayProps) {
+export function WinnerOverlay({ onRaceAgain }: WinnerOverlayProps) {
   return (
     <div style={overlayStyle}>
       <h2 style={{
-        color: winner === 'red' ? COLORS.red.primary : COLORS.blue.primary,
+        color: COLORS.red.primary,
         fontSize: '48px',
         margin: 0,
       }}>
-        {winner === 'red' ? 'Red' : 'Blue'} Wins!
+        You Win!
       </h2>
       <button onClick={onRaceAgain}>
-        Race Again
+        Play Again
       </button>
     </div>
   )
