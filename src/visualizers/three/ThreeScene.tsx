@@ -228,7 +228,7 @@ export function ThreeScene({
   const redSwirlsRef = useRef<THREE.Sprite[]>([])
   const blueSwirlsRef = useRef<THREE.Sprite[]>([])
   const animationStartTimeRef = useRef<number>(0)
-  const waveTimeOriginRef = useRef<number>(performance.now())  // Stable time for wave animation
+  const waveTimeOriginRef = useRef<number>(0)
 
   // Game actions
   const handleStartRace = useCallback(() => {
@@ -248,6 +248,9 @@ export function ThreeScene({
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
+
+    // Initialize wave time origin (must be in useEffect, not during render)
+    waveTimeOriginRef.current = performance.now()
 
     // === Scene Setup ===
     const scene = new THREE.Scene()
