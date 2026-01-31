@@ -12,6 +12,7 @@ import {
 } from './constants'
 import { getFrequencyAverage } from './utils/audio'
 import { SetupOverlay } from './components/SetupOverlay'
+import { CountdownOverlay } from './components/CountdownOverlay'
 import { WinnerOverlay } from './components/WinnerOverlay'
 import { createWindSwirlSprites, updateWindSwirls, disposeWindSwirls } from './three/windSwirls'
 import { createSandTerrain } from './three/sandTerrain'
@@ -89,11 +90,15 @@ export function Visualizer({
 
   // Game actions
   const handleStartRace = useCallback(() => {
-    // Reset boat positions when starting race
+    // Reset boat positions when starting countdown
     if (redBoatRef.current) redBoatRef.current.position.x = RACE_START_X
     if (blueBoatRef.current) blueBoatRef.current.position.x = RACE_START_X
-    setScreen('race')
+    setScreen('countdown')
     setWinner(null)
+  }, [])
+
+  const handleCountdownComplete = useCallback(() => {
+    setScreen('race')
   }, [])
 
   const handleRaceAgain = useCallback(() => {
@@ -483,6 +488,10 @@ export function Visualizer({
           onStartRace={handleStartRace}
           onRequestMic={onRequestMic}
         />
+      )}
+
+      {screen === 'countdown' && (
+        <CountdownOverlay onComplete={handleCountdownComplete} />
       )}
 
       {screen === 'winner' && winner && (
