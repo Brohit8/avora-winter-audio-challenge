@@ -23,23 +23,23 @@ interface WindSwirlDef {
 const WIND_SWIRL_DEFS: WindSwirlDef[][] = [
   // Variation 0: Medium
   [
-    { spiralX: 0, spiralY: 0.65, spiralTurns: 1.5, spiralRadius: 0.1, tailLength: 0.55, tailWaves: 0, tailAmplitude: 0.12, lineWidth: 4 }
+    { spiralX: 0, spiralY: 0.65, spiralTurns: 1.5, spiralRadius: 0.1, tailLength: 0.38, tailWaves: 0, tailAmplitude: 0.2, lineWidth: 4 }
   ],
   // Variation 1: Larger coil
   [
-    { spiralX: 0, spiralY: 0.7, spiralTurns: 1.5, spiralRadius: 0.11, tailLength: 0.5, tailWaves: 0, tailAmplitude: 0.15, lineWidth: 4.5 }
+    { spiralX: 0, spiralY: 0.7, spiralTurns: 1.5, spiralRadius: 0.11, tailLength: 0.35, tailWaves: 0, tailAmplitude: 0.24, lineWidth: 4.5 }
   ],
   // Variation 2: Smaller
   [
-    { spiralX: 0, spiralY: 0.6, spiralTurns: 1.5, spiralRadius: 0.08, tailLength: 0.6, tailWaves: 0, tailAmplitude: 0.1, lineWidth: 4 }
+    { spiralX: 0, spiralY: 0.6, spiralTurns: 1.5, spiralRadius: 0.08, tailLength: 0.42, tailWaves: 0, tailAmplitude: 0.18, lineWidth: 4 }
   ],
   // Variation 3: Tight coil
   [
-    { spiralX: 0, spiralY: 0.55, spiralTurns: 1.7, spiralRadius: 0.09, tailLength: 0.52, tailWaves: 0, tailAmplitude: 0.14, lineWidth: 3.5 }
+    { spiralX: 0, spiralY: 0.55, spiralTurns: 1.7, spiralRadius: 0.09, tailLength: 0.36, tailWaves: 0, tailAmplitude: 0.22, lineWidth: 3.5 }
   ],
   // Variation 4: Wide tail
   [
-    { spiralX: 0, spiralY: 0.68, spiralTurns: 1.3, spiralRadius: 0.12, tailLength: 0.58, tailWaves: 0, tailAmplitude: 0.18, lineWidth: 4 }
+    { spiralX: 0, spiralY: 0.68, spiralTurns: 1.3, spiralRadius: 0.12, tailLength: 0.4, tailWaves: 0, tailAmplitude: 0.26, lineWidth: 4 }
   ]
 ]
 
