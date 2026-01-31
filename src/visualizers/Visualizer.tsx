@@ -1,13 +1,14 @@
 import { useRef, useEffect, useState, useCallback } from 'react'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
-import type { VisualizerProps, Screen, FrequencyRange, BoatColor } from './types'
+import type { VisualizerProps, Screen, BoatColor } from './types'
 import {
   COLORS,
-  DEFAULT_RED_RANGE,
+  MAX_SLIDER_BIN,
 } from './constants'
 import { getFrequencyAverage } from './utils/audio'
 import { SetupOverlay } from './components/SetupOverlay'
+import { DEFAULT_DIVISION_BIN } from './components/FrequencyDivisionSlider'
 import { CountdownOverlay } from './components/CountdownOverlay'
 import { WinnerOverlay } from './components/WinnerOverlay'
 import { createWindSwirlSprites, updateWindSwirls, disposeWindSwirls } from './three/windSwirls'
@@ -51,12 +52,6 @@ const DIVE_SPEED = 8           // Speed of diving down and rising up
 const ACTION_THRESHOLD = 0.25  // Loudness threshold to trigger jump/dive
 const ACTION_COOLDOWN = 0.3    // Seconds to wait after action before allowing another
 
-// Frequency bands for jump/dive (FFT bin indices)
-const DIVE_FREQ_START = 0      // 0 Hz
-const DIVE_FREQ_END = 56       // ~1200 Hz (singing/humming range)
-const JUMP_FREQ_START = 56     // ~1200 Hz
-const JUMP_FREQ_END = 200      // ~4300 Hz (whistling range)
-
 /**
  * Visualizer - Three.js boat race visualizer with game logic
  */
@@ -73,7 +68,7 @@ export function Visualizer({
 
   // Game state
   const [screen, setScreen] = useState<Screen>('setup')
-  const [redRange, setRedRange] = useState<FrequencyRange>(DEFAULT_RED_RANGE)
+  const [divisionBin, setDivisionBin] = useState<number>(DEFAULT_DIVISION_BIN)
   const [winner, setWinner] = useState<BoatColor | null>(null)
 
   // Three.js object refs (shared between effects)
@@ -289,10 +284,10 @@ export function Visualizer({
             actionCooldownRef.current = Math.max(0, actionCooldownRef.current - dt)
           }
 
-          // Check for action triggers
+          // Check for action triggers (divisionBin splits dive/jump frequency ranges)
           if (frequencyData.current && !isJumpingRef.current && !isDivingRef.current) {
-            const diveLoudness = getFrequencyAverage(frequencyData.current, DIVE_FREQ_START, DIVE_FREQ_END)
-            const jumpLoudness = getFrequencyAverage(frequencyData.current, JUMP_FREQ_START, JUMP_FREQ_END)
+            const diveLoudness = getFrequencyAverage(frequencyData.current, 0, divisionBin)
+            const jumpLoudness = getFrequencyAverage(frequencyData.current, divisionBin, MAX_SLIDER_BIN)
 
             // Jump requires cooldown to be finished (discrete action)
             if (jumpLoudness > ACTION_THRESHOLD && actionCooldownRef.current === 0) {
@@ -324,7 +319,7 @@ export function Visualizer({
           else if (isDivingRef.current) {
             // Check if still holding dive (low frequency sound)
             const diveLoudness = frequencyData.current
-              ? getFrequencyAverage(frequencyData.current, DIVE_FREQ_START, DIVE_FREQ_END)
+              ? getFrequencyAverage(frequencyData.current, 0, divisionBin)
               : 0
 
             if (diveLoudness > ACTION_THRESHOLD) {
@@ -372,7 +367,7 @@ export function Visualizer({
 
         // Update wind swirls (positioned relative to boat)
         if (frequencyData.current && boat) {
-          const speed = getFrequencyAverage(frequencyData.current, redRange.start, redRange.end)
+          const speed = getFrequencyAverage(frequencyData.current, divisionBin, MAX_SLIDER_BIN)
           updateWindSwirls(
             windSwirlsRef.current,
             boat.position.x,
@@ -405,7 +400,7 @@ export function Visualizer({
     return () => {
       cancelAnimationFrame(frameId)
     }
-  }, [screen, redRange, frequencyData, winner])
+  }, [screen, divisionBin, frequencyData, winner])
 
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100dvh' }}>
@@ -413,8 +408,8 @@ export function Visualizer({
 
       {screen === 'setup' && (
         <SetupOverlay
-          boatRange={redRange}
-          onBoatRangeChange={setRedRange}
+          divisionBin={divisionBin}
+          onDivisionChange={setDivisionBin}
           onStartRace={handleStartRace}
           onRequestMic={onRequestMic}
         />

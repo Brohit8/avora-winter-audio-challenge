@@ -1,9 +1,8 @@
-import type { FrequencyRange } from '../types'
-import { FrequencySlider } from './FrequencySlider'
+import { FrequencyDivisionSlider } from './FrequencyDivisionSlider'
 
 interface SetupOverlayProps {
-  boatRange: FrequencyRange
-  onBoatRangeChange: (range: FrequencyRange) => void
+  divisionBin: number
+  onDivisionChange: (bin: number) => void
   onStartRace: () => void
   onRequestMic: () => Promise<void>
 }
@@ -60,8 +59,8 @@ const buttonStyle: React.CSSProperties = {
 }
 
 export function SetupOverlay({
-  boatRange,
-  onBoatRangeChange,
+  divisionBin,
+  onDivisionChange,
   onStartRace,
   onRequestMic,
 }: SetupOverlayProps) {
@@ -76,14 +75,12 @@ export function SetupOverlay({
 
       <p style={instructionsStyle}>
         Control your boat with your voice!<br />
-        High pitch = jump, Low pitch = duck.
+        Sing low to dive, whistle high to jump.
       </p>
 
-      <FrequencySlider
-        color="red"
-        label="Boat"
-        range={boatRange}
-        onRangeChange={onBoatRangeChange}
+      <FrequencyDivisionSlider
+        divisionBin={divisionBin}
+        onDivisionChange={onDivisionChange}
       />
 
       <button style={buttonStyle} onClick={handleStartClick}>
