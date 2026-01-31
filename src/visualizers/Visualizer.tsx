@@ -22,7 +22,8 @@ import { enableShadows, applySailMaterial } from './three/models'
 // 3D Scene Layout (module-specific constants)
 // =============================================================================
 
-const RACE_START_X = -4
+// Boat fixed X position (left-third of screen, like dino game)
+const BOAT_X = -2.5
 
 // Boat base Y position (lower = more submerged, higher = floating)
 const BOAT_BASE_Y = 0.25
@@ -68,7 +69,7 @@ export function Visualizer({
   // Game actions
   const handleStartRace = useCallback(() => {
     // Reset boat position when starting countdown
-    if (boatRef.current) boatRef.current.position.x = RACE_START_X
+    if (boatRef.current) boatRef.current.position.x = BOAT_X
     setScreen('countdown')
     setWinner(null)
   }, [])
@@ -165,7 +166,7 @@ export function Visualizer({
         const boat = gltf.scene.clone()
         enableShadows(boat)
         applySailMaterial(boat, sailMaterial)
-        boat.position.set(RACE_START_X, BOAT_BASE_Y, GUTTER_Z)
+        boat.position.set(BOAT_X, BOAT_BASE_Y, GUTTER_Z)
         boat.scale.set(0.5, 0.5, 0.5)
         boat.rotation.y = Math.PI / 2
         scene.add(boat)
@@ -273,7 +274,7 @@ export function Visualizer({
 
       // Reset boat position and camera when in setup
       if (screen === 'setup' && boat && camera) {
-        boat.position.x = RACE_START_X
+        boat.position.x = BOAT_X
         // Reset camera to default position
         camera.position.copy(DEFAULT_CAMERA_POS)
         camera.lookAt(DEFAULT_CAMERA_TARGET)
