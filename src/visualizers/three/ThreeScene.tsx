@@ -13,6 +13,7 @@ import {
 import { getFrequencyAverage } from '../utils/audio'
 import { SetupOverlay } from '../components/SetupOverlay'
 import { WinnerOverlay } from '../components/WinnerOverlay'
+import { createWindSwirlSprites, updateWindSwirls, disposeWindSwirls } from './windSwirls'
 
 // Race boundaries (X positions in 3D space)
 const RACE_START_X = -4
@@ -222,6 +223,8 @@ export function ThreeScene({
   const buoy2Ref = useRef<THREE.Group | null>(null)
   const waterMaterial1Ref = useRef<THREE.ShaderMaterial | null>(null)
   const waterMaterial2Ref = useRef<THREE.ShaderMaterial | null>(null)
+  const redSwirlsRef = useRef<THREE.Sprite[]>([])
+  const blueSwirlsRef = useRef<THREE.Sprite[]>([])
   const animationStartTimeRef = useRef<number>(0)
   const waveTimeOriginRef = useRef<number>(performance.now())  // Stable time for wave animation
 
@@ -483,6 +486,15 @@ export function ThreeScene({
       }
     )
 
+    // === Wind Swirl Sprites ===
+    const redSwirls = createWindSwirlSprites(5)
+    redSwirls.forEach(sprite => scene.add(sprite))
+    redSwirlsRef.current = redSwirls
+
+    const blueSwirls = createWindSwirlSprites(5)
+    blueSwirls.forEach(sprite => scene.add(sprite))
+    blueSwirlsRef.current = blueSwirls
+
     // === Cleanup ===
     return () => {
       waterGeometry.dispose()
@@ -499,6 +511,14 @@ export function ThreeScene({
       if (blueBoatRef.current) scene.remove(blueBoatRef.current)
       if (buoy1Ref.current) scene.remove(buoy1Ref.current)
       if (buoy2Ref.current) scene.remove(buoy2Ref.current)
+
+      // Cleanup wind swirls
+      redSwirlsRef.current.forEach(sprite => scene.remove(sprite))
+      blueSwirlsRef.current.forEach(sprite => scene.remove(sprite))
+      disposeWindSwirls(redSwirlsRef.current)
+      disposeWindSwirls(blueSwirlsRef.current)
+      redSwirlsRef.current = []
+      blueSwirlsRef.current = []
 
       renderer.dispose()
       container.removeChild(renderer.domElement)
@@ -592,6 +612,24 @@ export function ThreeScene({
         redBoat.position.x += redSpeed * BASE_SPEED_MULTIPLIER * WHISTLE_BOOST
         blueBoat.position.x += blueSpeed * BASE_SPEED_MULTIPLIER * SINGING_BOOST
 
+        // Update wind swirls based on audio loudness
+        updateWindSwirls(
+          redSwirlsRef.current,
+          redBoat.position.x,
+          redBoat.position.y,
+          redBoat.position.z,
+          redSpeed,
+          elapsed
+        )
+        updateWindSwirls(
+          blueSwirlsRef.current,
+          blueBoat.position.x,
+          blueBoat.position.y,
+          blueBoat.position.z,
+          blueSpeed,
+          elapsed
+        )
+
         // Check for winner (front of boat crosses the buoy finish line)
         const redFront = redBoat.position.x + BOAT_FRONT_OFFSET
         const blueFront = blueBoat.position.x + BOAT_FRONT_OFFSET
@@ -606,6 +644,10 @@ export function ThreeScene({
           animationStartTimeRef.current = performance.now()
           setScreen('win_animation')
         }
+      } else {
+        // Hide wind swirls when not racing
+        redSwirlsRef.current.forEach(sprite => sprite.visible = false)
+        blueSwirlsRef.current.forEach(sprite => sprite.visible = false)
       }
 
       // Camera pan animation during win_animation screen
