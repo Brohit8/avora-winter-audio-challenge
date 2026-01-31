@@ -183,9 +183,8 @@ export function updateWindSwirls(
   // Thresholds for showing 1, 2, 3, 4, 5 swirls based on loudness
   const loudnessThresholds = [0.03, 0.08, 0.15, 0.25, 0.35]
 
-  // Sail dimensions for positioning bounds
-  const sailHeight = 0.8   // Approximate sail height
-  const sailWidth = 0.3    // Approximate sail width
+  // Sail width for positioning bounds
+  const sailWidth = 0.3
 
   for (let i = 0; i < sprites.length; i++) {
     const sprite = sprites[i]
