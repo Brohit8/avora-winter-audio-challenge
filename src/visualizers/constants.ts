@@ -27,15 +27,6 @@ export const WHISTLE_BOOST = 30             // Narrow-band signals (whistling) n
 export const SINGING_BOOST = 7             // Spread-spectrum signals (singing/humming)
 
 // =============================================================================
-// Canvas 2D Layout (will be replaced by Three.js constants)
-// =============================================================================
-
-export const GUTTER_HEIGHT = 60
-export const GUTTER_GAP = 40
-export const BOAT_RADIUS = 15
-export const CANVAS_PADDING = 50
-
-// =============================================================================
 // Colors
 // =============================================================================
 
