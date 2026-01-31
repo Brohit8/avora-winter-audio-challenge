@@ -16,19 +16,13 @@ import { createWindSwirlSprites, updateWindSwirls, disposeWindSwirls } from './t
 import { createSandTerrain } from './three/sandTerrain'
 import { getGerstnerDisplacement, getGerstnerNormal } from './three/gerstnerWaves'
 import { createGutter, type GutterResources } from './three/gutter'
-import { enableShadows, applySailMaterial, makeUnlit } from './three/models'
+import { enableShadows, applySailMaterial } from './three/models'
 
 // =============================================================================
 // 3D Scene Layout (module-specific constants)
 // =============================================================================
 
 const RACE_START_X = -4
-
-// Buoy position (finish line) - positioned toward end of gutter
-const BUOY_X = 5.25
-
-// Boat hull tip offset from center (measured from bounding box: max.z * 0.5 scale)
-const BOAT_FRONT_OFFSET = 1
 
 // Boat base Y position (lower = more submerged, higher = floating)
 const BOAT_BASE_Y = 0.25
@@ -39,15 +33,9 @@ const GUTTER_Z = 0
 // Wave phase offset
 const GUTTER_PHASE = 0.0
 
-// Camera animation settings
-const CAMERA_ANIMATION_DURATION = 2000 // 2 seconds in ms
+// Camera settings
 const DEFAULT_CAMERA_POS = new THREE.Vector3(0, 5, 10)
 const DEFAULT_CAMERA_TARGET = new THREE.Vector3(0, 0, 0)
-
-// Ease-out cubic for smooth deceleration
-function easeOutCubic(t: number): number {
-  return 1 - Math.pow(1 - t, 3)
-}
 
 /**
  * Visualizer - Three.js boat race visualizer with game logic
@@ -73,10 +61,8 @@ export function Visualizer({
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null)
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
   const boatRef = useRef<THREE.Group | null>(null)
-  const buoyRef = useRef<THREE.Group | null>(null)
   const waterMaterialRef = useRef<THREE.ShaderMaterial | null>(null)
   const windSwirlsRef = useRef<THREE.Sprite[]>([])
-  const animationStartTimeRef = useRef<number>(0)
   const waveTimeOriginRef = useRef<number>(0)
 
   // Game actions
@@ -167,24 +153,6 @@ export function Visualizer({
     // === Load Models ===
     const loader = new GLTFLoader()
 
-    // Load finish line buoy (unlit so checkered pattern ignores lighting)
-    loader.load(
-      '/models/buoy.glb',
-      (gltf) => {
-        const buoy = gltf.scene.clone()
-        makeUnlit(buoy)
-        enableShadows(buoy, true, false)
-        buoy.position.set(BUOY_X, 0.1, GUTTER_Z - 0.6)
-        buoy.scale.set(0.36, 0.36, 0.36)
-        scene.add(buoy)
-        buoyRef.current = buoy
-      },
-      undefined,
-      (error) => {
-        console.error('Error loading buoy model:', error)
-      }
-    )
-
     const sailMaterial = new THREE.MeshStandardMaterial({
       color: COLORS.red.primary,
       metalness: 0.0,
@@ -234,7 +202,6 @@ export function Visualizer({
       sailMaterial.dispose()
 
       if (boatRef.current) scene.remove(boatRef.current)
-      if (buoyRef.current) scene.remove(buoyRef.current)
 
       // Cleanup wind swirls
       windSwirlsRef.current.forEach(sprite => scene.remove(sprite))
@@ -248,7 +215,6 @@ export function Visualizer({
       cameraRef.current = null
       rendererRef.current = null
       boatRef.current = null
-      buoyRef.current = null
       waterMaterialRef.current = null
     }
   }, [])
@@ -285,17 +251,6 @@ export function Visualizer({
         boat.rotation.x = Math.asin(normal.nz) * 0.5    // Pitch
       }
 
-      // Apply buoy rocking synced to Gerstner waves
-      const buoy = buoyRef.current
-
-      if (buoy) {
-        const disp = getGerstnerDisplacement(BUOY_X, GUTTER_Z - 0.6, elapsed, GUTTER_PHASE)
-        const normal = getGerstnerNormal(BUOY_X, GUTTER_Z - 0.6, elapsed, GUTTER_PHASE)
-        buoy.position.y = 0.1 + disp.dy
-        buoy.rotation.z = Math.asin(-normal.nx) * 0.4
-        buoy.rotation.x = Math.asin(normal.nz) * 0.4
-      }
-
       // During race, update boat position from audio data
       if (screen === 'race' && frequencyData.current && boat) {
         const speed = getFrequencyAverage(frequencyData.current, redRange.start, redRange.end)
@@ -311,59 +266,9 @@ export function Visualizer({
           speed,
           elapsed
         )
-
-        // Check for winner (front of boat crosses the buoy finish line)
-        const boatFront = boat.position.x + BOAT_FRONT_OFFSET
-
-        if (boatFront >= BUOY_X) {
-          setWinner('red')
-          // Start camera animation instead of showing winner immediately
-          animationStartTimeRef.current = performance.now()
-          setScreen('win_animation')
-        }
       } else {
         // Hide wind swirls when not racing
         windSwirlsRef.current.forEach(sprite => sprite.visible = false)
-      }
-
-      // Camera pan animation during win_animation screen
-      if (screen === 'win_animation' && winner && camera) {
-        const animationElapsed = performance.now() - animationStartTimeRef.current
-        const progress = Math.min(animationElapsed / CAMERA_ANIMATION_DURATION, 1)
-        const easedProgress = easeOutCubic(progress)
-
-        // Calculate boat's position at finish line
-        const winnerZ = GUTTER_Z
-        const boatY = BOAT_BASE_Y
-
-        // Camera position: behind finish line, slightly elevated, centered on winner's lane
-        // Distance back from boat determines field of view of the scene
-        const cameraDistance = 4
-        const cameraHeight = boatY + 0.8  // Slightly above boat for slight downward angle
-        const targetPos = new THREE.Vector3(
-          BUOY_X + cameraDistance,
-          cameraHeight,
-          winnerZ  // Directly behind winner for center framing
-        )
-
-        // Look directly at the winning boat's position to center it on screen
-        const targetLookAt = new THREE.Vector3(BUOY_X, boatY, winnerZ)
-
-        // Lerp camera position
-        camera.position.lerpVectors(DEFAULT_CAMERA_POS, targetPos, easedProgress)
-
-        // Lerp lookAt target
-        const currentLookAt = new THREE.Vector3().lerpVectors(
-          DEFAULT_CAMERA_TARGET,
-          targetLookAt,
-          easedProgress
-        )
-        camera.lookAt(currentLookAt)
-
-        // Transition to winner screen after animation completes
-        if (progress >= 1) {
-          setScreen('winner')
-        }
       }
 
       // Reset boat position and camera when in setup
