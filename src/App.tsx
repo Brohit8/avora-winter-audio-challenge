@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useAudio } from './audio/useAudio'
 import { ThreeScene } from './visualizers/three/ThreeScene'
-//import { Visualizer } from './visualizers/Visualizer'
 
 import './App.css'
 
@@ -69,13 +68,6 @@ function App() {
           width={CANVAS_WIDTH}
           height={CANVAS_HEIGHT}
         />
-        {/* <Visualizer
-          frequencyData={frequencyData}
-          timeDomainData={timeDomainData}
-          isActive={isActive}
-          width={CANVAS_WIDTH}
-          height={CANVAS_HEIGHT}
-        /> */}
 
         <div className="controls-overlay">
           <fieldset>

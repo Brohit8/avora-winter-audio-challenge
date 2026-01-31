@@ -40,7 +40,7 @@ const DEFAULT_AUDIO_OPTIONS = {
  * run their own requestAnimationFrame loop to read the data.
  *
  * DO NOT MODIFY THIS FILE - This is the stable audio pipeline for the challenge.
- * Modify src/visualizers/Visualizer.tsx instead.
+ * Modify src/visualizers/three/ThreeScene.tsx instead.
  */
 export function useAudio({ analyser, audio }: UseAudioOptions = {}): UseAudioReturn {
   const [isActive, setIsActive] = useState(false)
