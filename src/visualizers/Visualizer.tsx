@@ -215,29 +215,29 @@ export function Visualizer({
     const gutterSideGeometry = new THREE.BoxGeometry(12, 0.3, 0.1)
     const gutterSideMaterial = new THREE.MeshStandardMaterial({ color: 0x1a2a3f })
 
-    // Top gutter walls (center ± 0.75 for 1.5 width)
+    // Top gutter walls (offset = water half-width + wall half-thickness = 0.75 + 0.05)
     const gutter1Left = new THREE.Mesh(gutterSideGeometry, gutterSideMaterial)
-    gutter1Left.position.set(0, 0.15, GUTTER1_Z - 0.75)
+    gutter1Left.position.set(0, 0.15, GUTTER1_Z - 0.80)
     gutter1Left.receiveShadow = true
     scene.add(gutter1Left)
     const gutter1Right = new THREE.Mesh(gutterSideGeometry, gutterSideMaterial)
-    gutter1Right.position.set(0, 0.15, GUTTER1_Z + 0.75)
+    gutter1Right.position.set(0, 0.15, GUTTER1_Z + 0.80)
     gutter1Right.receiveShadow = true
     scene.add(gutter1Right)
 
     // Bottom gutter walls
     const gutter2Left = new THREE.Mesh(gutterSideGeometry, gutterSideMaterial)
-    gutter2Left.position.set(0, 0.15, GUTTER2_Z - 0.75)
+    gutter2Left.position.set(0, 0.15, GUTTER2_Z - 0.80)
     gutter2Left.receiveShadow = true
     scene.add(gutter2Left)
     const gutter2Right = new THREE.Mesh(gutterSideGeometry, gutterSideMaterial)
-    gutter2Right.position.set(0, 0.15, GUTTER2_Z + 0.75)
+    gutter2Right.position.set(0, 0.15, GUTTER2_Z + 0.80)
     gutter2Right.receiveShadow = true
     scene.add(gutter2Right)
 
     // Gutter bottoms (prevents seeing background through wave troughs)
-    // Width is 1.6 to cover the full span including wall thickness (1.5 inner + 0.1 walls)
-    const gutterBottomGeometry = new THREE.BoxGeometry(12, 0.05, 1.6)
+    // Width = water (1.5) + walls (0.1 × 2) + overlap (0.04) = 1.74
+    const gutterBottomGeometry = new THREE.BoxGeometry(12, 0.05, 1.74)
     const gutter1Bottom = new THREE.Mesh(gutterBottomGeometry, gutterSideMaterial)
     gutter1Bottom.position.set(0, 0, GUTTER1_Z)
     gutter1Bottom.receiveShadow = true
@@ -248,24 +248,25 @@ export function Visualizer({
     scene.add(gutter2Bottom)
 
     // Gutter end caps (front and back)
-    // Width is 1.6 to cover the full span including wall thickness (1.5 inner + 0.1 walls)
-    const gutterEndCapGeometry = new THREE.BoxGeometry(0.1, 0.3, 1.6)
+    // Width = water (1.5) + walls (0.1 × 2) + overlap (0.04) = 1.74
+    // X offset = side wall half-length + end cap half-thickness = 6 + 0.05 = 6.05
+    const gutterEndCapGeometry = new THREE.BoxGeometry(0.1, 0.3, 1.71)
     // Gutter 1 end caps
     const gutter1Front = new THREE.Mesh(gutterEndCapGeometry, gutterSideMaterial)
-    gutter1Front.position.set(-6, 0.15, GUTTER1_Z)
+    gutter1Front.position.set(-6.05, 0.15, GUTTER1_Z)
     gutter1Front.receiveShadow = true
     scene.add(gutter1Front)
     const gutter1Back = new THREE.Mesh(gutterEndCapGeometry, gutterSideMaterial)
-    gutter1Back.position.set(6, 0.15, GUTTER1_Z)
+    gutter1Back.position.set(6.05, 0.15, GUTTER1_Z)
     gutter1Back.receiveShadow = true
     scene.add(gutter1Back)
     // Gutter 2 end caps
     const gutter2Front = new THREE.Mesh(gutterEndCapGeometry, gutterSideMaterial)
-    gutter2Front.position.set(-6, 0.15, GUTTER2_Z)
+    gutter2Front.position.set(-6.05, 0.15, GUTTER2_Z)
     gutter2Front.receiveShadow = true
     scene.add(gutter2Front)
     const gutter2Back = new THREE.Mesh(gutterEndCapGeometry, gutterSideMaterial)
-    gutter2Back.position.set(6, 0.15, GUTTER2_Z)
+    gutter2Back.position.set(6.05, 0.15, GUTTER2_Z)
     gutter2Back.receiveShadow = true
     scene.add(gutter2Back)
 
