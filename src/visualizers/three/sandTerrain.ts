@@ -70,7 +70,7 @@ const DEFAULT_CONFIG: SandTerrainConfig = {
   segmentsZ: 40,
   bumpHeight: 0.35,   // Increased for more visible dunes
   bumpScale: 0.5,     // Larger features for better visibility
-  flattenCenter: true,
+  flattenCenter: false,
 }
 
 /**
