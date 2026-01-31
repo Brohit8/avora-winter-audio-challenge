@@ -38,6 +38,10 @@ const BOAT_BASE_Y = 0.25
 const GUTTER1_Z = -1.5  // Top gutter (red boat)
 const GUTTER2_Z = 1.5   // Bottom gutter (blue boat)
 
+// Wave phase offsets give each gutter different wave patterns
+const GUTTER1_PHASE = 0.0
+const GUTTER2_PHASE = 3.7
+
 // Camera animation settings
 const CAMERA_ANIMATION_DURATION = 2000 // 2 seconds in ms
 const DEFAULT_CAMERA_POS = new THREE.Vector3(0, 5, 10)
@@ -167,10 +171,6 @@ export function ThreeScene({
     // Water plane geometry with segments for smooth Gerstner displacement
     const waterGeometry = new THREE.PlaneGeometry(12, 1.5, 64, 16)
     waterGeometry.rotateX(-Math.PI / 2) // Lay flat
-
-    // Phase offsets give each gutter different wave patterns
-    const GUTTER1_PHASE = 0.0
-    const GUTTER2_PHASE = 3.7
 
     const waterMaterial1 = new THREE.ShaderMaterial({
       uniforms: {
@@ -439,10 +439,6 @@ export function ThreeScene({
       if (waterMat2) waterMat2.uniforms.uTime.value = elapsed
 
       // Apply boat rocking synced to Gerstner waves
-      // Each gutter has a different phase offset for variation
-      const GUTTER1_PHASE = 0.0
-      const GUTTER2_PHASE = 3.7
-
       if (redBoat) {
         // Get Gerstner displacement at boat position (red boat in gutter 1)
         const disp = getGerstnerDisplacement(redBoat.position.x, GUTTER1_Z, elapsed, GUTTER1_PHASE)
