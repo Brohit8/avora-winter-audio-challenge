@@ -59,10 +59,11 @@ export function Visualizer({
   frequencyData,
   timeDomainData: _timeDomainData,
   isActive: _isActive,
-  width,
-  height,
 }: VisualizerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
+
+  // Responsive sizing
+  const [size, setSize] = useState({ width: window.innerWidth, height: window.innerHeight })
 
   // Game state
   const [screen, setScreen] = useState<Screen>('setup')
@@ -124,15 +125,15 @@ export function Visualizer({
     scene.add(sand)
 
     // === Camera Setup ===
-    const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000)
+    const camera = new THREE.PerspectiveCamera(75, size.width / size.height, 0.1, 1000)
     camera.position.set(0, 5, 10)
     camera.lookAt(0, 0, 0)
     cameraRef.current = camera
 
     // === Renderer Setup ===
     const renderer = new THREE.WebGLRenderer({ antialias: true })
-    renderer.setSize(width, height)
-    renderer.setPixelRatio(window.devicePixelRatio)
+    renderer.setSize(size.width, size.height)
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)) // Cap at 2 for mobile performance
     renderer.shadowMap.enabled = true
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
     container.appendChild(renderer.domElement)
@@ -247,8 +248,20 @@ export function Visualizer({
     blueSwirls.forEach(sprite => scene.add(sprite))
     blueSwirlsRef.current = blueSwirls
 
+    // === Resize Handling ===
+    const handleResize = () => {
+      const width = window.innerWidth
+      const height = window.innerHeight
+      camera.aspect = width / height
+      camera.updateProjectionMatrix()
+      renderer.setSize(width, height)
+      setSize({ width, height })
+    }
+    window.addEventListener('resize', handleResize)
+
     // === Cleanup ===
     return () => {
+      window.removeEventListener('resize', handleResize)
       sandGeometry.dispose()
       sandMaterial.dispose()
       gutter1.dispose()
@@ -282,7 +295,7 @@ export function Visualizer({
       waterMaterial1Ref.current = null
       waterMaterial2Ref.current = null
     }
-  }, [width, height])
+  }, [])
 
   // Effect 2: Animation Loop (re-runs when screen or ranges change, like Canvas 2D)
   useEffect(() => {
@@ -457,8 +470,8 @@ export function Visualizer({
   }, [screen, redRange, blueRange, frequencyData, winner])
 
   return (
-    <div style={{ position: 'relative', width, height }}>
-      <div ref={containerRef} style={{ width, height }} />
+    <div style={{ position: 'relative', width: '100vw', height: '100dvh' }}>
+      <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
 
       {screen === 'setup' && (
         <SetupOverlay
