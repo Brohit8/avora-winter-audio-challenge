@@ -15,12 +15,8 @@ import { SetupOverlay } from './components/SetupOverlay'
 import { WinnerOverlay } from './components/WinnerOverlay'
 import { createWindSwirlSprites, updateWindSwirls, disposeWindSwirls } from './three/windSwirls'
 import { createSandTerrain } from './three/sandTerrain'
-import {
-  waterVertexShader,
-  waterFragmentShader,
-  getGerstnerDisplacement,
-  getGerstnerNormal,
-} from './three/gerstnerWaves'
+import { getGerstnerDisplacement, getGerstnerNormal } from './three/gerstnerWaves'
+import { createGutter, type GutterResources } from './three/gutter'
 
 // =============================================================================
 // 3D Scene Layout (module-specific constants)
@@ -166,109 +162,11 @@ export function Visualizer({
     directionalLight.shadow.camera.bottom = -10
     scene.add(directionalLight)
 
-    // === Gutters (water channels with Gerstner wave shader) ===
-    const waterColor = new THREE.Color(0x00abbf)      // Main water
-    const highlightColor = new THREE.Color(0xffffff)  // White foam on wave crests
-    const deepColor = new THREE.Color(0x01b3bf)       // Bright teal for troughs
-
-    // Water plane geometry with segments for smooth Gerstner displacement
-    const waterGeometry = new THREE.PlaneGeometry(12, 1.5, 64, 16)
-    waterGeometry.rotateX(-Math.PI / 2) // Lay flat
-
-    const waterMaterial1 = new THREE.ShaderMaterial({
-      uniforms: {
-        uTime: { value: 0 },
-        uPhaseOffset: { value: GUTTER1_PHASE },
-        uColor: { value: waterColor },
-        uHighlightColor: { value: highlightColor },
-        uDeepColor: { value: deepColor },
-      },
-      vertexShader: waterVertexShader,
-      fragmentShader: waterFragmentShader,
-    })
-    waterMaterial1Ref.current = waterMaterial1
-
-    const waterMaterial2 = new THREE.ShaderMaterial({
-      uniforms: {
-        uTime: { value: 0 },
-        uPhaseOffset: { value: GUTTER2_PHASE },
-        uColor: { value: waterColor.clone() },
-        uHighlightColor: { value: highlightColor.clone() },
-        uDeepColor: { value: deepColor.clone() },
-      },
-      vertexShader: waterVertexShader,
-      fragmentShader: waterFragmentShader,
-    })
-    waterMaterial2Ref.current = waterMaterial2
-
-    const water1 = new THREE.Mesh(waterGeometry, waterMaterial1)
-    water1.position.set(0, 0.25, GUTTER1_Z)
-    water1.receiveShadow = true
-    scene.add(water1)
-
-    const water2 = new THREE.Mesh(waterGeometry.clone(), waterMaterial2)
-    water2.position.set(0, 0.25, GUTTER2_Z)
-    water2.receiveShadow = true
-    scene.add(water2)
-
-    // Gutter sides (channel walls)
-    const gutterSideGeometry = new THREE.BoxGeometry(12, 0.3, 0.1)
-    const gutterSideMaterial = new THREE.MeshStandardMaterial({ color: 0x1a2a3f })
-
-    // Top gutter walls (offset = water half-width + wall half-thickness = 0.75 + 0.05)
-    const gutter1Left = new THREE.Mesh(gutterSideGeometry, gutterSideMaterial)
-    gutter1Left.position.set(0, 0.15, GUTTER1_Z - 0.80)
-    gutter1Left.receiveShadow = true
-    scene.add(gutter1Left)
-    const gutter1Right = new THREE.Mesh(gutterSideGeometry, gutterSideMaterial)
-    gutter1Right.position.set(0, 0.15, GUTTER1_Z + 0.80)
-    gutter1Right.receiveShadow = true
-    scene.add(gutter1Right)
-
-    // Bottom gutter walls
-    const gutter2Left = new THREE.Mesh(gutterSideGeometry, gutterSideMaterial)
-    gutter2Left.position.set(0, 0.15, GUTTER2_Z - 0.80)
-    gutter2Left.receiveShadow = true
-    scene.add(gutter2Left)
-    const gutter2Right = new THREE.Mesh(gutterSideGeometry, gutterSideMaterial)
-    gutter2Right.position.set(0, 0.15, GUTTER2_Z + 0.80)
-    gutter2Right.receiveShadow = true
-    scene.add(gutter2Right)
-
-    // Gutter bottoms (prevents seeing background through wave troughs)
-    // Width = water (1.5) + walls (0.1 × 2) + overlap (0.04) = 1.74
-    const gutterBottomGeometry = new THREE.BoxGeometry(12, 0.05, 1.74)
-    const gutter1Bottom = new THREE.Mesh(gutterBottomGeometry, gutterSideMaterial)
-    gutter1Bottom.position.set(0, 0, GUTTER1_Z)
-    gutter1Bottom.receiveShadow = true
-    scene.add(gutter1Bottom)
-    const gutter2Bottom = new THREE.Mesh(gutterBottomGeometry, gutterSideMaterial)
-    gutter2Bottom.position.set(0, 0, GUTTER2_Z)
-    gutter2Bottom.receiveShadow = true
-    scene.add(gutter2Bottom)
-
-    // Gutter end caps (front and back)
-    // Width = water (1.5) + walls (0.1 × 2) + overlap (0.04) = 1.74
-    // X offset = side wall half-length + end cap half-thickness = 6 + 0.05 = 6.05
-    const gutterEndCapGeometry = new THREE.BoxGeometry(0.1, 0.3, 1.71)
-    // Gutter 1 end caps
-    const gutter1Front = new THREE.Mesh(gutterEndCapGeometry, gutterSideMaterial)
-    gutter1Front.position.set(-6.05, 0.15, GUTTER1_Z)
-    gutter1Front.receiveShadow = true
-    scene.add(gutter1Front)
-    const gutter1Back = new THREE.Mesh(gutterEndCapGeometry, gutterSideMaterial)
-    gutter1Back.position.set(6.05, 0.15, GUTTER1_Z)
-    gutter1Back.receiveShadow = true
-    scene.add(gutter1Back)
-    // Gutter 2 end caps
-    const gutter2Front = new THREE.Mesh(gutterEndCapGeometry, gutterSideMaterial)
-    gutter2Front.position.set(-6.05, 0.15, GUTTER2_Z)
-    gutter2Front.receiveShadow = true
-    scene.add(gutter2Front)
-    const gutter2Back = new THREE.Mesh(gutterEndCapGeometry, gutterSideMaterial)
-    gutter2Back.position.set(6.05, 0.15, GUTTER2_Z)
-    gutter2Back.receiveShadow = true
-    scene.add(gutter2Back)
+    // === Gutters (water channels) ===
+    const gutter1 = createGutter(scene, GUTTER1_Z, GUTTER1_PHASE)
+    const gutter2 = createGutter(scene, GUTTER2_Z, GUTTER2_PHASE)
+    waterMaterial1Ref.current = gutter1.waterMaterial
+    waterMaterial2Ref.current = gutter2.waterMaterial
 
     // === Load Models ===
     const loader = new GLTFLoader()
@@ -384,13 +282,8 @@ export function Visualizer({
     return () => {
       sandGeometry.dispose()
       sandMaterial.dispose()
-      waterGeometry.dispose()
-      waterMaterial1.dispose()
-      waterMaterial2.dispose()
-      gutterSideGeometry.dispose()
-      gutterBottomGeometry.dispose()
-      gutterEndCapGeometry.dispose()
-      gutterSideMaterial.dispose()
+      gutter1.dispose()
+      gutter2.dispose()
       redSailMaterial.dispose()
       blueSailMaterial.dispose()
 
