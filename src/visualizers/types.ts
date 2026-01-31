@@ -1,7 +1,7 @@
 import type { RefObject } from 'react'
 
 // Game state
-export type Screen = 'setup' | 'race' | 'winner'
+export type Screen = 'setup' | 'race' | 'win_animation' | 'winner'
 export type BoatColor = 'red' | 'blue'
 
 // Frequency range for boat assignment (FFT bin indices)

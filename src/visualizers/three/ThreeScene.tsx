@@ -23,6 +23,23 @@ const BUOY_X = 5.25
 // Boat hull tip offset from center (measured from bounding box: max.z * 0.5 scale)
 const BOAT_FRONT_OFFSET = 1.3
 
+// Boat base Y position (lower = more submerged, higher = floating)
+const BOAT_BASE_Y = 0.25
+
+// Gutter positions (z-axis)
+const GUTTER1_Z = -1.5  // Top gutter (red boat)
+const GUTTER2_Z = 1.5   // Bottom gutter (blue boat)
+
+// Camera animation settings
+const CAMERA_ANIMATION_DURATION = 2000 // 2 seconds in ms
+const DEFAULT_CAMERA_POS = new THREE.Vector3(0, 5, 10)
+const DEFAULT_CAMERA_TARGET = new THREE.Vector3(0, 0, 0)
+
+// Ease-out cubic for smooth deceleration
+function easeOutCubic(t: number): number {
+  return 1 - Math.pow(1 - t, 3)
+}
+
 // =============================================================================
 // GERSTNER WAVES - Industry standard for realistic ocean simulation
 // Reference: GPU Gems Ch.1, used in Sea of Thieves, AC Black Flag
@@ -205,6 +222,8 @@ export function ThreeScene({
   const buoy2Ref = useRef<THREE.Group | null>(null)
   const waterMaterial1Ref = useRef<THREE.ShaderMaterial | null>(null)
   const waterMaterial2Ref = useRef<THREE.ShaderMaterial | null>(null)
+  const animationStartTimeRef = useRef<number>(0)
+  const waveTimeOriginRef = useRef<number>(performance.now())  // Stable time for wave animation
 
   // Game actions
   const handleStartRace = useCallback(() => {
@@ -311,12 +330,12 @@ export function ThreeScene({
     waterMaterial2Ref.current = waterMaterial2
 
     const water1 = new THREE.Mesh(waterGeometry, waterMaterial1)
-    water1.position.set(0, 0.25, -2)
+    water1.position.set(0, 0.25, GUTTER1_Z)
     water1.receiveShadow = true
     scene.add(water1)
 
     const water2 = new THREE.Mesh(waterGeometry.clone(), waterMaterial2)
-    water2.position.set(0, 0.25, 2)
+    water2.position.set(0, 0.25, GUTTER2_Z)
     water2.receiveShadow = true
     scene.add(water2)
 
@@ -324,23 +343,23 @@ export function ThreeScene({
     const gutterSideGeometry = new THREE.BoxGeometry(12, 0.3, 0.1)
     const gutterSideMaterial = new THREE.MeshStandardMaterial({ color: 0x1a2a3f })
 
-    // Top gutter walls
+    // Top gutter walls (center ± 0.75 for 1.5 width)
     const gutter1Left = new THREE.Mesh(gutterSideGeometry, gutterSideMaterial)
-    gutter1Left.position.set(0, 0.15, -2.75)
+    gutter1Left.position.set(0, 0.15, GUTTER1_Z - 0.75)
     gutter1Left.receiveShadow = true
     scene.add(gutter1Left)
     const gutter1Right = new THREE.Mesh(gutterSideGeometry, gutterSideMaterial)
-    gutter1Right.position.set(0, 0.15, -1.25)
+    gutter1Right.position.set(0, 0.15, GUTTER1_Z + 0.75)
     gutter1Right.receiveShadow = true
     scene.add(gutter1Right)
 
     // Bottom gutter walls
     const gutter2Left = new THREE.Mesh(gutterSideGeometry, gutterSideMaterial)
-    gutter2Left.position.set(0, 0.15, 1.25)
+    gutter2Left.position.set(0, 0.15, GUTTER2_Z - 0.75)
     gutter2Left.receiveShadow = true
     scene.add(gutter2Left)
     const gutter2Right = new THREE.Mesh(gutterSideGeometry, gutterSideMaterial)
-    gutter2Right.position.set(0, 0.15, 2.75)
+    gutter2Right.position.set(0, 0.15, GUTTER2_Z + 0.75)
     gutter2Right.receiveShadow = true
     scene.add(gutter2Right)
 
@@ -354,14 +373,14 @@ export function ThreeScene({
       (gltf) => {
         // Buoy at outer edge of top gutter (same visual side as bottom buoy)
         const buoy1 = gltf.scene.clone()
-        buoy1.position.set(BUOY_X, 0.1, -2.6)
+        buoy1.position.set(BUOY_X, 0.1, GUTTER1_Z - 0.6)
         buoy1.scale.set(0.36, 0.36, 0.36)
         scene.add(buoy1)
         buoy1Ref.current = buoy1
 
         // Buoy at inner edge of bottom gutter
         const buoy2 = gltf.scene.clone()
-        buoy2.position.set(BUOY_X, 0.1, 1.4)
+        buoy2.position.set(BUOY_X, 0.1, GUTTER2_Z - 0.6)
         buoy2.scale.set(0.36, 0.36, 0.36)
         scene.add(buoy2)
         buoy2Ref.current = buoy2
@@ -401,7 +420,7 @@ export function ThreeScene({
             }
           }
         })
-        redBoat.position.set(RACE_START_X, 0.35, -2)
+        redBoat.position.set(RACE_START_X, BOAT_BASE_Y, GUTTER1_Z)
         redBoat.scale.set(0.5, 0.5, 0.5)
         redBoat.rotation.y = Math.PI / 2
         scene.add(redBoat)
@@ -418,7 +437,7 @@ export function ThreeScene({
             }
           }
         })
-        blueBoat.position.set(RACE_START_X, 0.35, 2)
+        blueBoat.position.set(RACE_START_X, BOAT_BASE_Y, GUTTER2_Z)
         blueBoat.scale.set(0.5, 0.5, 0.5)
         blueBoat.rotation.y = Math.PI / 2
         scene.add(blueBoat)
@@ -468,7 +487,6 @@ export function ThreeScene({
     if (!scene || !camera || !renderer) return
 
     let frameId: number
-    const startTime = performance.now()
 
     function animate() {
       const redBoat = redBoatRef.current
@@ -476,8 +494,8 @@ export function ThreeScene({
       const waterMat1 = waterMaterial1Ref.current
       const waterMat2 = waterMaterial2Ref.current
 
-      // Update water shader time
-      const elapsed = (performance.now() - startTime) / 1000
+      // Use stable time reference for wave animation (prevents snapping on state changes)
+      const elapsed = (performance.now() - waveTimeOriginRef.current) / 1000
       if (waterMat1) waterMat1.uniforms.uTime.value = elapsed
       if (waterMat2) waterMat2.uniforms.uTime.value = elapsed
 
@@ -487,12 +505,12 @@ export function ThreeScene({
       const GUTTER2_PHASE = 3.7
 
       if (redBoat) {
-        // Get Gerstner displacement at boat position (red boat in gutter 1, z=-2)
-        const disp = getGerstnerDisplacement(redBoat.position.x, -2, elapsed, GUTTER1_PHASE)
-        const normal = getGerstnerNormal(redBoat.position.x, -2, elapsed, GUTTER1_PHASE)
+        // Get Gerstner displacement at boat position (red boat in gutter 1)
+        const disp = getGerstnerDisplacement(redBoat.position.x, GUTTER1_Z, elapsed, GUTTER1_PHASE)
+        const normal = getGerstnerNormal(redBoat.position.x, GUTTER1_Z, elapsed, GUTTER1_PHASE)
 
         // Apply vertical displacement (horizontal displacement already in shader)
-        redBoat.position.y = 0.35 + disp.dy
+        redBoat.position.y = BOAT_BASE_Y + disp.dy
 
         // Derive rotation from surface normal
         // Normal tilted in X → roll (rotation.z), Normal tilted in Z → pitch (rotation.x)
@@ -501,11 +519,11 @@ export function ThreeScene({
       }
 
       if (blueBoat) {
-        // Blue boat in gutter 2, z=2, with different phase
-        const disp = getGerstnerDisplacement(blueBoat.position.x, 2, elapsed, GUTTER2_PHASE)
-        const normal = getGerstnerNormal(blueBoat.position.x, 2, elapsed, GUTTER2_PHASE)
+        // Blue boat in gutter 2, with different phase
+        const disp = getGerstnerDisplacement(blueBoat.position.x, GUTTER2_Z, elapsed, GUTTER2_PHASE)
+        const normal = getGerstnerNormal(blueBoat.position.x, GUTTER2_Z, elapsed, GUTTER2_PHASE)
 
-        blueBoat.position.y = 0.35 + disp.dy
+        blueBoat.position.y = BOAT_BASE_Y + disp.dy
         blueBoat.rotation.z = Math.asin(-normal.nx) * 0.6
         blueBoat.rotation.x = Math.asin(normal.nz) * 0.5
       }
@@ -515,16 +533,16 @@ export function ThreeScene({
       const buoy2 = buoy2Ref.current
 
       if (buoy1) {
-        const disp = getGerstnerDisplacement(BUOY_X, -2.6, elapsed, GUTTER1_PHASE)
-        const normal = getGerstnerNormal(BUOY_X, -2.6, elapsed, GUTTER1_PHASE)
+        const disp = getGerstnerDisplacement(BUOY_X, GUTTER1_Z - 0.6, elapsed, GUTTER1_PHASE)
+        const normal = getGerstnerNormal(BUOY_X, GUTTER1_Z - 0.6, elapsed, GUTTER1_PHASE)
         buoy1.position.y = 0.1 + disp.dy
         buoy1.rotation.z = Math.asin(-normal.nx) * 0.4
         buoy1.rotation.x = Math.asin(normal.nz) * 0.4
       }
 
       if (buoy2) {
-        const disp = getGerstnerDisplacement(BUOY_X, 1.4, elapsed, GUTTER2_PHASE)
-        const normal = getGerstnerNormal(BUOY_X, 1.4, elapsed, GUTTER2_PHASE)
+        const disp = getGerstnerDisplacement(BUOY_X, GUTTER2_Z - 0.6, elapsed, GUTTER2_PHASE)
+        const normal = getGerstnerNormal(BUOY_X, GUTTER2_Z - 0.6, elapsed, GUTTER2_PHASE)
         buoy2.position.y = 0.1 + disp.dy
         buoy2.rotation.z = Math.asin(-normal.nx) * 0.4
         buoy2.rotation.x = Math.asin(normal.nz) * 0.4
@@ -548,14 +566,59 @@ export function ThreeScene({
           } else {
             setWinner('blue')
           }
+          // Start camera animation instead of showing winner immediately
+          animationStartTimeRef.current = performance.now()
+          setScreen('win_animation')
+        }
+      }
+
+      // Camera pan animation during win_animation screen
+      if (screen === 'win_animation' && winner && camera) {
+        const animationElapsed = performance.now() - animationStartTimeRef.current
+        const progress = Math.min(animationElapsed / CAMERA_ANIMATION_DURATION, 1)
+        const easedProgress = easeOutCubic(progress)
+
+        // Calculate winner's position at finish line
+        const winnerZ = winner === 'red' ? GUTTER1_Z : GUTTER2_Z
+        const boatY = BOAT_BASE_Y
+
+        // Camera position: behind finish line, slightly elevated, centered on winner's lane
+        // Distance back from boat determines field of view of the scene
+        const cameraDistance = 4
+        const cameraHeight = boatY + 0.8  // Slightly above boat for slight downward angle
+        const targetPos = new THREE.Vector3(
+          BUOY_X + cameraDistance,
+          cameraHeight,
+          winnerZ  // Directly behind winner for center framing
+        )
+
+        // Look directly at the winning boat's position to center it on screen
+        const targetLookAt = new THREE.Vector3(BUOY_X, boatY, winnerZ)
+
+        // Lerp camera position
+        camera.position.lerpVectors(DEFAULT_CAMERA_POS, targetPos, easedProgress)
+
+        // Lerp lookAt target
+        const currentLookAt = new THREE.Vector3().lerpVectors(
+          DEFAULT_CAMERA_TARGET,
+          targetLookAt,
+          easedProgress
+        )
+        camera.lookAt(currentLookAt)
+
+        // Transition to winner screen after animation completes
+        if (progress >= 1) {
           setScreen('winner')
         }
       }
 
-      // Reset boat positions when in setup
-      if (screen === 'setup' && redBoat && blueBoat) {
+      // Reset boat positions and camera when in setup
+      if (screen === 'setup' && redBoat && blueBoat && camera) {
         redBoat.position.x = RACE_START_X
         blueBoat.position.x = RACE_START_X
+        // Reset camera to default position
+        camera.position.copy(DEFAULT_CAMERA_POS)
+        camera.lookAt(DEFAULT_CAMERA_TARGET)
       }
 
       // Render (scene/camera/renderer are guaranteed non-null from the check above)
@@ -568,7 +631,7 @@ export function ThreeScene({
     return () => {
       cancelAnimationFrame(frameId)
     }
-  }, [screen, redRange, blueRange, frequencyData])
+  }, [screen, redRange, blueRange, frequencyData, winner])
 
   return (
     <div style={{ position: 'relative', width, height }}>
