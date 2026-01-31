@@ -76,6 +76,7 @@ export function FrequencySlider({
           alignItems: 'center',
           width: '200px',
           height: '20px',
+          margin: '0 auto',
         }}
       >
         <Slider.Track style={{
