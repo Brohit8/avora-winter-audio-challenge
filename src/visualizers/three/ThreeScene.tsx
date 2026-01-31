@@ -16,7 +16,12 @@ import { WinnerOverlay } from '../components/WinnerOverlay'
 
 // Race boundaries (X positions in 3D space)
 const RACE_START_X = -4
-const RACE_END_X = 4
+
+// Buoy position (finish line) - positioned toward end of gutter
+const BUOY_X = 5.25
+
+// Boat hull tip offset from center (measured from bounding box: max.z * 0.5 scale)
+const BOAT_FRONT_OFFSET = 1.3
 
 // =============================================================================
 // GERSTNER WAVES - Industry standard for realistic ocean simulation
@@ -36,9 +41,9 @@ interface GerstnerWave {
 // Each gutter will get a phase offset for variation
 // Steepness reduced for subtler motion (was 0.25/0.20/0.15/0.10)
 const GERSTNER_WAVES: GerstnerWave[] = [
-  { dir: [1.0, 0.0],   steepness: 0.12, wavelength: 4.0, speed: 1.2 },   // Primary: along gutter
-  { dir: [0.7, 0.7],   steepness: 0.08, wavelength: 2.5, speed: 1.5 },   // Diagonal
-  { dir: [0.9, -0.4],  steepness: 0.06, wavelength: 1.8, speed: 1.8 },   // Slight cross
+  { dir: [1.0, 0.0], steepness: 0.12, wavelength: 4.0, speed: 1.2 },   // Primary: along gutter
+  { dir: [0.7, 0.7], steepness: 0.08, wavelength: 2.5, speed: 1.5 },   // Diagonal
+  { dir: [0.9, -0.4], steepness: 0.06, wavelength: 1.8, speed: 1.8 },   // Slight cross
   { dir: [-0.3, 0.95], steepness: 0.04, wavelength: 1.2, speed: 2.2 },   // Cross-wave (perpendicular chop)
 ]
 
@@ -196,6 +201,8 @@ export function ThreeScene({
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
   const redBoatRef = useRef<THREE.Group | null>(null)
   const blueBoatRef = useRef<THREE.Group | null>(null)
+  const buoy1Ref = useRef<THREE.Group | null>(null)
+  const buoy2Ref = useRef<THREE.Group | null>(null)
   const waterMaterial1Ref = useRef<THREE.ShaderMaterial | null>(null)
   const waterMaterial2Ref = useRef<THREE.ShaderMaterial | null>(null)
 
@@ -337,17 +344,33 @@ export function ThreeScene({
     gutter2Right.receiveShadow = true
     scene.add(gutter2Right)
 
-    // === Finish Line ===
-    const finishLineGeometry = new THREE.BoxGeometry(0.2, 0.6, 5)
-    const finishLineMaterial = new THREE.MeshStandardMaterial({ color: COLORS.finishLine })
-    const finishLine = new THREE.Mesh(finishLineGeometry, finishLineMaterial)
-    finishLine.position.set(RACE_END_X, 0.3, 0)
-    finishLine.castShadow = true
-    finishLine.receiveShadow = true
-    scene.add(finishLine)
-
-    // === Load Boat Models ===
+    // === Load Models ===
     const loader = new GLTFLoader()
+
+    // Load finish line buoys (both on same visual side from camera)
+    // Shadows disabled - thin flag geometry causes artifacts
+    loader.load(
+      '/models/buoy.glb',
+      (gltf) => {
+        // Buoy at outer edge of top gutter (same visual side as bottom buoy)
+        const buoy1 = gltf.scene.clone()
+        buoy1.position.set(BUOY_X, 0.1, -2.6)
+        buoy1.scale.set(0.36, 0.36, 0.36)
+        scene.add(buoy1)
+        buoy1Ref.current = buoy1
+
+        // Buoy at inner edge of bottom gutter
+        const buoy2 = gltf.scene.clone()
+        buoy2.position.set(BUOY_X, 0.1, 1.4)
+        buoy2.scale.set(0.36, 0.36, 0.36)
+        scene.add(buoy2)
+        buoy2Ref.current = buoy2
+      },
+      undefined,
+      (error) => {
+        console.error('Error loading buoy model:', error)
+      }
+    )
 
     const redSailMaterial = new THREE.MeshStandardMaterial({
       color: COLORS.red.primary,
@@ -378,7 +401,7 @@ export function ThreeScene({
             }
           }
         })
-        redBoat.position.set(RACE_START_X, 0.5, -2)
+        redBoat.position.set(RACE_START_X, 0.35, -2)
         redBoat.scale.set(0.5, 0.5, 0.5)
         redBoat.rotation.y = Math.PI / 2
         scene.add(redBoat)
@@ -395,7 +418,7 @@ export function ThreeScene({
             }
           }
         })
-        blueBoat.position.set(RACE_START_X, 0.5, 2)
+        blueBoat.position.set(RACE_START_X, 0.35, 2)
         blueBoat.scale.set(0.5, 0.5, 0.5)
         blueBoat.rotation.y = Math.PI / 2
         scene.add(blueBoat)
@@ -414,13 +437,13 @@ export function ThreeScene({
       waterMaterial2.dispose()
       gutterSideGeometry.dispose()
       gutterSideMaterial.dispose()
-      finishLineGeometry.dispose()
-      finishLineMaterial.dispose()
       redSailMaterial.dispose()
       blueSailMaterial.dispose()
 
       if (redBoatRef.current) scene.remove(redBoatRef.current)
       if (blueBoatRef.current) scene.remove(blueBoatRef.current)
+      if (buoy1Ref.current) scene.remove(buoy1Ref.current)
+      if (buoy2Ref.current) scene.remove(buoy2Ref.current)
 
       renderer.dispose()
       container.removeChild(renderer.domElement)
@@ -430,6 +453,8 @@ export function ThreeScene({
       rendererRef.current = null
       redBoatRef.current = null
       blueBoatRef.current = null
+      buoy1Ref.current = null
+      buoy2Ref.current = null
       waterMaterial1Ref.current = null
       waterMaterial2Ref.current = null
     }
@@ -467,7 +492,7 @@ export function ThreeScene({
         const normal = getGerstnerNormal(redBoat.position.x, -2, elapsed, GUTTER1_PHASE)
 
         // Apply vertical displacement (horizontal displacement already in shader)
-        redBoat.position.y = 0.5 + disp.dy
+        redBoat.position.y = 0.35 + disp.dy
 
         // Derive rotation from surface normal
         // Normal tilted in X → roll (rotation.z), Normal tilted in Z → pitch (rotation.x)
@@ -480,9 +505,29 @@ export function ThreeScene({
         const disp = getGerstnerDisplacement(blueBoat.position.x, 2, elapsed, GUTTER2_PHASE)
         const normal = getGerstnerNormal(blueBoat.position.x, 2, elapsed, GUTTER2_PHASE)
 
-        blueBoat.position.y = 0.5 + disp.dy
+        blueBoat.position.y = 0.35 + disp.dy
         blueBoat.rotation.z = Math.asin(-normal.nx) * 0.6
         blueBoat.rotation.x = Math.asin(normal.nz) * 0.5
+      }
+
+      // Apply buoy rocking synced to Gerstner waves
+      const buoy1 = buoy1Ref.current
+      const buoy2 = buoy2Ref.current
+
+      if (buoy1) {
+        const disp = getGerstnerDisplacement(BUOY_X, -2.6, elapsed, GUTTER1_PHASE)
+        const normal = getGerstnerNormal(BUOY_X, -2.6, elapsed, GUTTER1_PHASE)
+        buoy1.position.y = 0.1 + disp.dy
+        buoy1.rotation.z = Math.asin(-normal.nx) * 0.4
+        buoy1.rotation.x = Math.asin(normal.nz) * 0.4
+      }
+
+      if (buoy2) {
+        const disp = getGerstnerDisplacement(BUOY_X, 1.4, elapsed, GUTTER2_PHASE)
+        const normal = getGerstnerNormal(BUOY_X, 1.4, elapsed, GUTTER2_PHASE)
+        buoy2.position.y = 0.1 + disp.dy
+        buoy2.rotation.z = Math.asin(-normal.nx) * 0.4
+        buoy2.rotation.x = Math.asin(normal.nz) * 0.4
       }
 
       // During race, update boat positions from audio data
@@ -493,9 +538,12 @@ export function ThreeScene({
         redBoat.position.x += redSpeed * BASE_SPEED_MULTIPLIER * WHISTLE_BOOST
         blueBoat.position.x += blueSpeed * BASE_SPEED_MULTIPLIER * SINGING_BOOST
 
-        // Check for winner (first to cross finish line)
-        if (redBoat.position.x >= RACE_END_X || blueBoat.position.x >= RACE_END_X) {
-          if (redBoat.position.x > blueBoat.position.x) {
+        // Check for winner (front of boat crosses the buoy finish line)
+        const redFront = redBoat.position.x + BOAT_FRONT_OFFSET
+        const blueFront = blueBoat.position.x + BOAT_FRONT_OFFSET
+
+        if (redFront >= BUOY_X || blueFront >= BUOY_X) {
+          if (redFront > blueFront) {
             setWinner('red')
           } else {
             setWinner('blue')
