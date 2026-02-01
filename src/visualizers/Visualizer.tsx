@@ -8,6 +8,7 @@ import {
 } from './constants'
 import { getFrequencyAverage } from './utils/audio'
 import { SetupOverlay } from './components/SetupOverlay'
+import { ScoreDisplay } from './components/ScoreDisplay'
 import { DEFAULT_DIVISION_BIN } from './components/FrequencyDivisionSlider'
 import { CountdownOverlay } from './components/CountdownOverlay'
 import { WinnerOverlay } from './components/WinnerOverlay'
@@ -21,7 +22,7 @@ import { enableShadows, applySailMaterial } from './three/models'
 // 3D Scene Layout (module-specific constants)
 // =============================================================================
 
-// Boat fixed X position (left-third of screen, like dino game)
+// Boat fixed X position
 const BOAT_X = -2.5
 
 // Boat base Y position (lower = more submerged, higher = floating)
@@ -40,17 +41,20 @@ const DEFAULT_CAMERA_TARGET = new THREE.Vector3(0, 0, 0)
 // World scroll speed (units per second)
 const WORLD_SCROLL_SPEED = 3
 
-// Jump physics (Chrome dino style)
-const JUMP_VELOCITY = 8        // Initial upward velocity
-const GRAVITY = 25             // Downward acceleration
+// Jump physics
+const JUMP_VELOCITY = 8
+const GRAVITY = 25
 
 // Dive physics
-const DIVE_DEPTH = -0.6        // How far below water (negative = down, 50% sail visible)
-const DIVE_SPEED = 8           // Speed of diving down and rising up
+const DIVE_DEPTH = -0.6
+const DIVE_SPEED = 8
 
 // Audio thresholds
-const ACTION_THRESHOLD = 0.25  // Loudness threshold to trigger jump/dive
-const ACTION_COOLDOWN = 0.3    // Seconds to wait after action before allowing another
+const ACTION_THRESHOLD = 0.25
+const ACTION_COOLDOWN = 0.3
+
+// Score
+const SCORE_COEFFICIENT = 3
 
 /**
  * Visualizer - Three.js boat race visualizer with game logic
@@ -70,6 +74,7 @@ export function Visualizer({
   const [screen, setScreen] = useState<Screen>('setup')
   const [divisionBin, setDivisionBin] = useState<number>(DEFAULT_DIVISION_BIN)
   const [winner, setWinner] = useState<BoatColor | null>(null)
+  const [score, setScore] = useState<number>(0)
 
   // Three.js object refs (shared between effects)
   const sceneRef = useRef<THREE.Scene | null>(null)
@@ -138,6 +143,7 @@ export function Visualizer({
     diveProgressRef.current = 0
     actionCooldownRef.current = 0
     isDownKeyHeldRef.current = false
+    setScore(0)
     setScreen('countdown')
     setWinner(null)
   }, [])
@@ -404,6 +410,9 @@ export function Visualizer({
         // Increment world offset (for obstacle positioning and score)
         worldOffsetRef.current += WORLD_SCROLL_SPEED * deltaTime
 
+        // Update score based on distance traveled
+        setScore(Math.floor(worldOffsetRef.current * SCORE_COEFFICIENT))
+
         // Update wind swirls (positioned relative to boat)
         if (frequencyData.current && boat) {
           const speed = getFrequencyAverage(frequencyData.current, divisionBin, MAX_SLIDER_BIN)
@@ -444,6 +453,10 @@ export function Visualizer({
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100dvh' }}>
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+
+      {screen === 'race' && (
+        <ScoreDisplay score={score} />
+      )}
 
       {screen === 'setup' && (
         <SetupOverlay
