@@ -16,7 +16,7 @@ import { WinnerOverlay } from './components/WinnerOverlay'
 import { createWindSwirlSprites, updateWindSwirls, disposeWindSwirls } from './three/windSwirls'
 import { createSandTerrain } from './three/sandTerrain'
 import { getGerstnerDisplacement, getGerstnerNormal } from './three/gerstnerWaves'
-import { createGutter, type GutterResources } from './three/gutter'
+import { createGutter } from './three/gutter'
 import { enableShadows, applySailMaterial } from './three/models'
 import {
   createObstacle,
@@ -25,6 +25,7 @@ import {
   getJumpObstacleTypes,
   getDiveObstacleTypes,
   checkCollision,
+  setSpiralModel,
   type Obstacle,
   type ObstacleType,
 } from './three/obstacles'
@@ -326,6 +327,18 @@ export function Visualizer({
       undefined,
       (error) => {
         console.error('Error loading boat model:', error)
+      }
+    )
+
+    // Load spiral model once - cached and cloned for each obstacle
+    loader.load(
+      '/models/spiral_v3.glb',
+      (gltf) => {
+        setSpiralModel(gltf.scene)
+      },
+      undefined,
+      (error) => {
+        console.error('Error loading spiral model:', error)
       }
     )
 
