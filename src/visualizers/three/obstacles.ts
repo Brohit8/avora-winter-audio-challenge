@@ -118,3 +118,38 @@ export function getJumpObstacleTypes(): ObstacleType[] {
 export function getDiveObstacleTypes(): ObstacleType[] {
   return ['BIRD']
 }
+
+// Forgiving hitbox shrink factor (0.6 = 40% smaller than visual)
+const HITBOX_SHRINK = 0.6
+
+/**
+ * Check collision between boat and obstacle using forgiving AABB
+ */
+export function checkCollision(
+  boatX: number,
+  boatY: number,
+  boatWidth: number,
+  boatHeight: number,
+  obstacle: Obstacle
+): boolean {
+  const { mesh, config } = obstacle
+
+  // Boat hitbox (centered on boatX, boatY)
+  const bHalfW = (boatWidth * HITBOX_SHRINK) / 2
+  const bHalfH = (boatHeight * HITBOX_SHRINK) / 2
+  const bLeft = boatX - bHalfW
+  const bRight = boatX + bHalfW
+  const bBottom = boatY - bHalfH
+  const bTop = boatY + bHalfH
+
+  // Obstacle hitbox (mesh.position is center)
+  const oHalfW = (config.width * HITBOX_SHRINK) / 2
+  const oHalfH = (config.height * HITBOX_SHRINK) / 2
+  const oLeft = mesh.position.x - oHalfW
+  const oRight = mesh.position.x + oHalfW
+  const oBottom = mesh.position.y - oHalfH
+  const oTop = mesh.position.y + oHalfH
+
+  // AABB collision check
+  return bLeft < oRight && bRight > oLeft && bBottom < oTop && bTop > oBottom
+}

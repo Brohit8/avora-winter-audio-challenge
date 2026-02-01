@@ -9,6 +9,7 @@ import {
 import { getFrequencyAverage } from './utils/audio'
 import { SetupOverlay } from './components/SetupOverlay'
 import { ScoreDisplay } from './components/ScoreDisplay'
+import { GameOverOverlay } from './components/GameOverOverlay'
 import { DEFAULT_DIVISION_BIN } from './components/FrequencyDivisionSlider'
 import { CountdownOverlay } from './components/CountdownOverlay'
 import { WinnerOverlay } from './components/WinnerOverlay'
@@ -23,6 +24,7 @@ import {
   isObstacleOffScreen,
   getJumpObstacleTypes,
   getDiveObstacleTypes,
+  checkCollision,
   type Obstacle,
   type ObstacleType,
 } from './three/obstacles'
@@ -71,6 +73,10 @@ const OBSTACLE_MIN_GAP = 4          // Minimum world units between obstacles
 const OBSTACLE_GAP_VARIANCE = 3     // Random extra gap
 const OBSTACLE_SPAWN_DISTANCE = 8   // How far ahead to spawn (off right side of screen)
 const MAX_OBSTACLE_DUPLICATION = 2  // Max same type in a row
+
+// Boat collision hitbox (approximate dimensions at 0.35 scale)
+const BOAT_HITBOX_WIDTH = 0.8
+const BOAT_HITBOX_HEIGHT = 0.6
 
 /**
  * Visualizer - Three.js boat race visualizer with game logic
@@ -182,6 +188,10 @@ export function Visualizer({
   const handleRaceAgain = useCallback(() => {
     setScreen('setup')
     setWinner(null)
+  }, [])
+
+  const handleGameOver = useCallback(() => {
+    setScreen('gameOver')
   }, [])
 
   // Effect 1: Scene Setup (only re-runs when dimensions change)
@@ -490,6 +500,22 @@ export function Visualizer({
           updateObstacle(obstacle, worldOffset, elapsed, GUTTER_Z, GUTTER_PHASE)
         })
 
+        // Check collision with obstacles
+        if (boat) {
+          for (const obstacle of obstaclesRef.current) {
+            if (checkCollision(
+              boat.position.x,
+              boat.position.y,
+              BOAT_HITBOX_WIDTH,
+              BOAT_HITBOX_HEIGHT,
+              obstacle
+            )) {
+              handleGameOver()
+              return // Stop animation loop
+            }
+          }
+        }
+
         // Remove off-screen obstacles
         const toRemove = obstaclesRef.current.filter(obs => isObstacleOffScreen(obs, worldOffset))
         toRemove.forEach(obs => scene!.remove(obs.mesh))
@@ -530,7 +556,7 @@ export function Visualizer({
     return () => {
       cancelAnimationFrame(frameId)
     }
-  }, [screen, divisionBin, frequencyData, winner])
+  }, [screen, divisionBin, frequencyData, winner, handleGameOver])
 
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100dvh' }}>
@@ -557,6 +583,13 @@ export function Visualizer({
         <WinnerOverlay
           winner={winner}
           onRaceAgain={handleRaceAgain}
+        />
+      )}
+
+      {screen === 'gameOver' && (
+        <GameOverOverlay
+          score={score}
+          onPlayAgain={handleStartRace}
         />
       )}
     </div>
