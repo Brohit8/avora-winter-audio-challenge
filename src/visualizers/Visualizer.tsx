@@ -38,7 +38,7 @@ import { createClouds, updateClouds, type CloudSystem } from './three/clouds'
 // =============================================================================
 
 // Boat fixed X position
-const BOAT_X = -2.5
+const BOAT_X = -1.5
 
 // Boat base Y position (lower = more submerged, higher = floating)
 const BOAT_BASE_Y = 0.35  // Adjusted for water at Y=0.35
