@@ -28,6 +28,7 @@ import {
   type Obstacle,
   type ObstacleType,
 } from './three/obstacles'
+import { createClouds, updateClouds, type CloudSystem } from './three/clouds'
 
 // =============================================================================
 // 3D Scene Layout (module-specific constants)
@@ -133,6 +134,7 @@ export function Visualizer({
   const lastObstacleWorldXRef = useRef<number>(0)
   const obstacleHistoryRef = useRef<ObstacleType[]>([])
   const animationStartTimeRef = useRef<number>(0)
+  const cloudSystemRef = useRef<CloudSystem | null>(null)
 
   // Keyboard controls for jump (spacebar) and dive (down arrow)
   useEffect(() => {
@@ -296,6 +298,10 @@ export function Visualizer({
     const gutter = createGutter(scene, GUTTER_Z, GUTTER_PHASE)
     waterMaterialRef.current = gutter.waterMaterial
 
+    // === Clouds (parallax background) ===
+    const cloudSystem = createClouds(scene)
+    cloudSystemRef.current = cloudSystem
+
     // === Load Models ===
     const loader = new GLTFLoader()
 
@@ -354,6 +360,12 @@ export function Visualizer({
       disposeWindSwirls(windSwirlsRef.current)
       windSwirlsRef.current = []
 
+      // Cleanup clouds
+      if (cloudSystemRef.current) {
+        cloudSystemRef.current.clouds.forEach(c => scene.remove(c.mesh))
+        cloudSystemRef.current.dispose()
+      }
+
       renderer.dispose()
       container.removeChild(renderer.domElement)
 
@@ -363,6 +375,7 @@ export function Visualizer({
       boatRef.current = null
       waterMaterialRef.current = null
       sandMaterialRef.current = null
+      cloudSystemRef.current = null
     }
   }, [])
 
@@ -387,6 +400,10 @@ export function Visualizer({
       // Sand mesh is 150 units wide, UV spans 0-1, so 1/150 = 0.00667 per world unit
       const sandMat = sandMaterialRef.current
       if (sandMat) sandMat.uniforms.uOffset.value = worldOffsetRef.current / 150
+
+      // Update cloud parallax (slower than world speed for depth)
+      const clouds = cloudSystemRef.current
+      if (clouds) updateClouds(clouds, worldOffsetRef.current)
 
       // Apply boat rocking synced to Gerstner waves
       if (boat) {
