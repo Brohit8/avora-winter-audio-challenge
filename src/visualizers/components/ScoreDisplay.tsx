@@ -1,5 +1,6 @@
 interface ScoreDisplayProps {
   score: number
+  highScore: number
 }
 
 const containerStyle: React.CSSProperties = {
@@ -14,15 +15,24 @@ const containerStyle: React.CSSProperties = {
   userSelect: 'none',
   pointerEvents: 'none',
   zIndex: 10,
+  display: 'flex',
+  gap: 'clamp(16px, 4vw, 32px)',
 }
 
-export function ScoreDisplay({ score }: ScoreDisplayProps) {
-  // Format score with leading zeros (5 digits)
+const highScoreStyle: React.CSSProperties = {
+  opacity: 0.7,
+}
+
+export function ScoreDisplay({ score, highScore }: ScoreDisplayProps) {
   const formattedScore = score.toString().padStart(5, '0')
+  const formattedHighScore = highScore.toString().padStart(5, '0')
 
   return (
     <div style={containerStyle}>
-      {formattedScore}
+      {highScore > 0 && (
+        <span style={highScoreStyle}>HI {formattedHighScore}</span>
+      )}
+      <span>{formattedScore}</span>
     </div>
   )
 }

@@ -74,6 +74,7 @@ const ACTION_COOLDOWN = 0.3
 
 // Score
 const SCORE_COEFFICIENT = 3
+const HIGH_SCORE_KEY = 'sonicSurf_highScore'
 
 // Obstacles
 const OBSTACLE_SPAWN_DELAY = 3      // Seconds before first obstacle
@@ -105,6 +106,11 @@ export function Visualizer({
   const [divisionBin, setDivisionBin] = useState<number>(DEFAULT_DIVISION_BIN)
   const [winner, setWinner] = useState<BoatColor | null>(null)
   const [score, setScore] = useState<number>(0)
+  const [highScore, setHighScore] = useState<number>(() => {
+    const saved = localStorage.getItem(HIGH_SCORE_KEY)
+    return saved ? parseInt(saved, 10) : 0
+  })
+  const [isNewHighScore, setIsNewHighScore] = useState<boolean>(false)
 
   // Three.js object refs (shared between effects)
   const sceneRef = useRef<THREE.Scene | null>(null)
@@ -205,9 +211,18 @@ export function Visualizer({
   }, [])
 
   const handleGameOver = useCallback(() => {
+    // Check for new high score
+    const currentScore = Math.floor(worldOffsetRef.current * SCORE_COEFFICIENT)
+    if (currentScore > highScore) {
+      setHighScore(currentScore)
+      setIsNewHighScore(true)
+      localStorage.setItem(HIGH_SCORE_KEY, currentScore.toString())
+    } else {
+      setIsNewHighScore(false)
+    }
     animationStartTimeRef.current = performance.now()
     setScreen('gameOver_animation')
-  }, [])
+  }, [highScore])
 
   // Effect 1: Scene Setup (only re-runs when dimensions change)
   useEffect(() => {
@@ -615,7 +630,7 @@ export function Visualizer({
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
 
       {screen === 'race' && (
-        <ScoreDisplay score={score} />
+        <ScoreDisplay score={score} highScore={highScore} />
       )}
 
       {screen === 'setup' && (
@@ -641,6 +656,8 @@ export function Visualizer({
       {screen === 'gameOver' && (
         <GameOverOverlay
           score={score}
+          highScore={highScore}
+          isNewHighScore={isNewHighScore}
           onPlayAgain={handleStartRace}
         />
       )}
