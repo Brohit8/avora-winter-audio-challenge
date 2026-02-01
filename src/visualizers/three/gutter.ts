@@ -7,9 +7,9 @@ import { waterVertexShader, waterFragmentShader } from './gerstnerWaves'
  */
 
 // Gutter geometry constants
-const GUTTER_LENGTH = 12
+const GUTTER_LENGTH = 80  // Extended to span well beyond any camera view
 const WATER_WIDTH = 1.5
-const WATER_SEGMENTS_X = 64
+const WATER_SEGMENTS_X = 200  // More segments for longer water
 const WATER_SEGMENTS_Z = 16
 const WATER_Y = 0.25
 
@@ -21,9 +21,6 @@ const WALL_OFFSET = 0.80  // water half-width (0.75) + wall half-thickness (0.05
 const BOTTOM_HEIGHT = 0.05
 const BOTTOM_WIDTH = 1.74  // water + walls + small overlap
 const BOTTOM_Y = 0
-
-const END_CAP_WIDTH = 1.71
-const END_CAP_X_OFFSET = 6.05  // gutter half-length (6) + end cap half-thickness (0.05)
 
 const WALL_COLOR = 0x1a2a3f
 const WATER_COLOR = 0x00abbf
@@ -96,19 +93,6 @@ export function createGutter(
   bottom.receiveShadow = true
   scene.add(bottom)
 
-  // End caps
-  const endCapGeometry = new THREE.BoxGeometry(WALL_THICKNESS, WALL_HEIGHT, END_CAP_WIDTH)
-
-  const frontCap = new THREE.Mesh(endCapGeometry, wallMaterial)
-  frontCap.position.set(-END_CAP_X_OFFSET, WALL_Y, gutterZ)
-  frontCap.receiveShadow = true
-  scene.add(frontCap)
-
-  const backCap = new THREE.Mesh(endCapGeometry, wallMaterial)
-  backCap.position.set(END_CAP_X_OFFSET, WALL_Y, gutterZ)
-  backCap.receiveShadow = true
-  scene.add(backCap)
-
   // Return resources for animation and cleanup
   return {
     waterMaterial,
@@ -117,7 +101,6 @@ export function createGutter(
       waterMaterial.dispose()
       sideGeometry.dispose()
       bottomGeometry.dispose()
-      endCapGeometry.dispose()
       wallMaterial.dispose()
     },
   }
