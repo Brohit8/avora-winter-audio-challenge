@@ -26,6 +26,7 @@ import {
   getDiveObstacleTypes,
   checkCollision,
   setSpiralModel,
+  setMolarModel,
   setToothbrushModel,
   type Obstacle,
   type ObstacleType,
@@ -340,6 +341,18 @@ export function Visualizer({
       undefined,
       (error) => {
         console.error('Error loading spiral model:', error)
+      }
+    )
+
+    // Load molar model once - cached and cloned for each obstacle
+    loader.load(
+      '/models/molar.glb',
+      (gltf) => {
+        setMolarModel(gltf.scene)
+      },
+      undefined,
+      (error) => {
+        console.error('Error loading molar model:', error)
       }
     )
 

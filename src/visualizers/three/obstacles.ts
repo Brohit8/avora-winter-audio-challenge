@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { getGerstnerDisplacement, getGerstnerNormal } from './gerstnerWaves'
 
 // Obstacle type definitions
-export type ObstacleType = 'SPIRAL' | 'ROCK_LARGE' | 'TOOTHBRUSH'
+export type ObstacleType = 'SPIRAL' | 'MOLAR' | 'TOOTHBRUSH'
 
 interface ObstacleConfig {
   width: number
@@ -22,12 +22,12 @@ const OBSTACLE_CONFIGS: Record<ObstacleType, ObstacleConfig> = {
     baseY: 0.55,  // Floats higher on water surface
     floatsOnWater: true,
   },
-  ROCK_LARGE: {
-    width: 0.6,
-    height: 0.7,
+  MOLAR: {
+    width: 0.5,
+    height: 0.5,
     depth: 0.5,
-    color: 0x4a4a4a,
-    baseY: 0.25,  // Adjusted for water at Y=0.35
+    color: 0xf5f5dc,  // Off-white tooth color (fallback)
+    baseY: 0.50,  // Slightly submerged in water
     floatsOnWater: true,
   },
   TOOTHBRUSH: {
@@ -149,31 +149,64 @@ function cloneToothbrushModel(): THREE.Group {
   return outerGroup
 }
 
-export function createObstacleMesh(type: ObstacleType): THREE.Mesh | THREE.Group {
-  // Use cached spiral model for SPIRAL type
-  if (type === 'SPIRAL') {
-    return cloneSpiralModel()
-  }
+// =============================================================================
+// Molar Model Configuration
+// =============================================================================
 
-  // Use cached toothbrush model for TOOTHBRUSH type
-  if (type === 'TOOTHBRUSH') {
-    return cloneToothbrushModel()
-  }
+// Adjust this to change the molar size
+const MOLAR_SCALE = 0.5
 
-  // Fallback to box geometry for other types
-  const config = OBSTACLE_CONFIGS[type]
-  const geometry = new THREE.BoxGeometry(config.width, config.height, config.depth)
-  const material = new THREE.MeshStandardMaterial({
-    color: config.color,
-    roughness: 0.8,
-    metalness: 0.1,
+// Cached molar model - set once after loading, cloned for each obstacle
+let cachedMolarModel: THREE.Group | null = null
+
+/**
+ * Set the molar model after loading. Call once at scene setup.
+ * Applies scale and shadows - orientation is applied per-clone.
+ */
+export function setMolarModel(model: THREE.Group): void {
+  model.scale.set(MOLAR_SCALE, MOLAR_SCALE, MOLAR_SCALE)
+  model.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      child.castShadow = true
+      child.receiveShadow = true
+    }
   })
+  cachedMolarModel = model
+}
 
-  const mesh = new THREE.Mesh(geometry, material)
-  mesh.castShadow = true
-  mesh.receiveShadow = true
+/**
+ * Clone the cached molar model with nested group structure.
+ * Outer group receives wave rocking, inner model maintains upright orientation.
+ */
+function cloneMolarModel(): THREE.Group {
+  const outerGroup = new THREE.Group()
 
-  return mesh
+  if (!cachedMolarModel) {
+    // Fallback: simple sphere if model not loaded yet
+    const geometry = new THREE.SphereGeometry(0.2, 8, 6)
+    const material = new THREE.MeshStandardMaterial({ color: 0xf5f5dc })
+    const mesh = new THREE.Mesh(geometry, material)
+    mesh.castShadow = true
+    outerGroup.add(mesh)
+    return outerGroup
+  }
+
+  const innerModel = cachedMolarModel.clone()
+  innerModel.rotation.y = -Math.PI / 6  // Slight rotation for visual interest
+  outerGroup.add(innerModel)
+
+  return outerGroup
+}
+
+export function createObstacleMesh(type: ObstacleType): THREE.Mesh | THREE.Group {
+  switch (type) {
+    case 'SPIRAL':
+      return cloneSpiralModel()
+    case 'MOLAR':
+      return cloneMolarModel()
+    case 'TOOTHBRUSH':
+      return cloneToothbrushModel()
+  }
 }
 
 export function createObstacle(type: ObstacleType, worldX: number): Obstacle {
@@ -224,7 +257,7 @@ export function getObstacleConfig(type: ObstacleType): ObstacleConfig {
 }
 
 export function getJumpObstacleTypes(): ObstacleType[] {
-  return ['SPIRAL', 'ROCK_LARGE']
+  return ['SPIRAL', 'MOLAR']
 }
 
 export function getDiveObstacleTypes(): ObstacleType[] {
