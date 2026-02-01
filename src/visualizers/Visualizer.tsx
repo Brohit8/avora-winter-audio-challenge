@@ -86,6 +86,44 @@ export function Visualizer({
   const isDivingRef = useRef<boolean>(false)
   const diveProgressRef = useRef<number>(0)  // 0 = surface, 1 = fully submerged
   const actionCooldownRef = useRef<number>(0)  // Time remaining before next action allowed
+  const isDownKeyHeldRef = useRef<boolean>(false)  // Track if down arrow is held
+
+  // Keyboard controls for jump (spacebar) and dive (down arrow)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (screen !== 'race') return
+
+      if (e.code === 'Space' && !e.repeat) {
+        // Spacebar = Jump (only if not already jumping and cooldown finished)
+        if (!isJumpingRef.current && !isDivingRef.current && actionCooldownRef.current === 0) {
+          isJumpingRef.current = true
+          boatVelocityYRef.current = JUMP_VELOCITY
+        }
+        e.preventDefault()
+      } else if (e.code === 'ArrowDown') {
+        // Down arrow = Dive (hold to stay down)
+        if (!isJumpingRef.current && !isDivingRef.current) {
+          isDivingRef.current = true
+        }
+        isDownKeyHeldRef.current = true
+        e.preventDefault()
+      }
+    }
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'ArrowDown') {
+        isDownKeyHeldRef.current = false
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
+    }
+  }, [screen])
 
   // Game actions
   const handleStartRace = useCallback(() => {
@@ -99,6 +137,7 @@ export function Visualizer({
     isDivingRef.current = false
     diveProgressRef.current = 0
     actionCooldownRef.current = 0
+    isDownKeyHeldRef.current = false
     setScreen('countdown')
     setWinner(null)
   }, [])
@@ -317,12 +356,12 @@ export function Visualizer({
           }
           // Apply dive physics when submerging
           else if (isDivingRef.current) {
-            // Check if still holding dive (low frequency sound)
+            // Check if still holding dive (low frequency sound OR down arrow key)
             const diveLoudness = frequencyData.current
               ? getFrequencyAverage(frequencyData.current, 0, divisionBin)
               : 0
 
-            if (diveLoudness > ACTION_THRESHOLD) {
+            if (diveLoudness > ACTION_THRESHOLD || isDownKeyHeldRef.current) {
               // Dive down toward target depth
               diveProgressRef.current = Math.min(1, diveProgressRef.current + DIVE_SPEED * dt)
             } else {
