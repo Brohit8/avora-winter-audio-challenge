@@ -118,6 +118,7 @@ export function Visualizer({
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
   const boatRef = useRef<THREE.Group | null>(null)
   const waterMaterialRef = useRef<THREE.ShaderMaterial | null>(null)
+  const sandMaterialRef = useRef<THREE.ShaderMaterial | null>(null)
   const windSwirlsRef = useRef<THREE.Sprite[]>([])
   const waveTimeOriginRef = useRef<number>(0)
   const worldOffsetRef = useRef<number>(0)
@@ -288,6 +289,9 @@ export function Visualizer({
     directionalLight.shadow.camera.bottom = -10
     scene.add(directionalLight)
 
+    // Store sand material ref for animation updates
+    sandMaterialRef.current = sandMaterial
+
     // === Gutter (water channel) ===
     const gutter = createGutter(scene, GUTTER_Z, GUTTER_PHASE)
     waterMaterialRef.current = gutter.waterMaterial
@@ -358,6 +362,7 @@ export function Visualizer({
       rendererRef.current = null
       boatRef.current = null
       waterMaterialRef.current = null
+      sandMaterialRef.current = null
     }
   }, [])
 
@@ -377,6 +382,11 @@ export function Visualizer({
       // Use stable time reference for wave animation (prevents snapping on state changes)
       const elapsed = (performance.now() - waveTimeOriginRef.current) / 1000
       if (waterMat) waterMat.uniforms.uTime.value = elapsed
+
+      // Update sand texture scroll based on world offset (creates movement illusion)
+      // Sand mesh is 150 units wide, UV spans 0-1, so 1/150 = 0.00667 per world unit
+      const sandMat = sandMaterialRef.current
+      if (sandMat) sandMat.uniforms.uOffset.value = worldOffsetRef.current / 150
 
       // Apply boat rocking synced to Gerstner waves
       if (boat) {
