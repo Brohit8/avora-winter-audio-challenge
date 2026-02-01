@@ -37,7 +37,7 @@ import {
 const BOAT_X = -2.5
 
 // Boat base Y position (lower = more submerged, higher = floating)
-const BOAT_BASE_Y = 0.25
+const BOAT_BASE_Y = 0.35  // Adjusted for water at Y=0.35
 
 // Gutter position (z-axis) - single centered gutter
 const GUTTER_Z = 0

@@ -19,7 +19,7 @@ const OBSTACLE_CONFIGS: Record<ObstacleType, ObstacleConfig> = {
     height: 0.5,
     depth: 0.4,
     color: 0x5a5a5a,
-    baseY: 0.1,
+    baseY: 0.2,  // Adjusted for water at Y=0.35
     floatsOnWater: true,
   },
   ROCK_LARGE: {
@@ -27,7 +27,7 @@ const OBSTACLE_CONFIGS: Record<ObstacleType, ObstacleConfig> = {
     height: 0.7,
     depth: 0.5,
     color: 0x4a4a4a,
-    baseY: 0.15,
+    baseY: 0.25,  // Adjusted for water at Y=0.35
     floatsOnWater: true,
   },
   BIRD: {
@@ -35,7 +35,7 @@ const OBSTACLE_CONFIGS: Record<ObstacleType, ObstacleConfig> = {
     height: 0.2,
     depth: 0.8,
     color: 0x2a2a2a,
-    baseY: 0.9,  // At sail height level
+    baseY: 1.0,  // Adjusted for higher boat position
     floatsOnWater: false,
   },
 }
