@@ -35,7 +35,7 @@ const OBSTACLE_CONFIGS: Record<ObstacleType, ObstacleConfig> = {
     height: 0.2,
     depth: 0.8,
     color: 0x2a2a2a,
-    baseY: 1.2,
+    baseY: 0.9,  // At sail height level
     floatsOnWater: false,
   },
 }
@@ -122,6 +122,10 @@ export function getDiveObstacleTypes(): ObstacleType[] {
 // Forgiving hitbox shrink factor (0.6 = 40% smaller than visual)
 const HITBOX_SHRINK = 0.6
 
+// Boat sail extends upward from boat position
+const BOAT_SAIL_HEIGHT = 0.8  // How far the sail extends above boat.position.y
+const BOAT_SAIL_OFFSET = 0.3  // Vertical offset to center hitbox on sail
+
 /**
  * Check collision between boat and obstacle using forgiving AABB
  */
@@ -134,13 +138,14 @@ export function checkCollision(
 ): boolean {
   const { mesh, config } = obstacle
 
-  // Boat hitbox (centered on boatX, boatY)
+  // Boat hitbox (offset upward to cover sail)
   const bHalfW = (boatWidth * HITBOX_SHRINK) / 2
-  const bHalfH = (boatHeight * HITBOX_SHRINK) / 2
+  const bHalfH = ((boatHeight + BOAT_SAIL_HEIGHT) * HITBOX_SHRINK) / 2
+  const boatCenterY = boatY + BOAT_SAIL_OFFSET  // Offset hitbox upward
   const bLeft = boatX - bHalfW
   const bRight = boatX + bHalfW
-  const bBottom = boatY - bHalfH
-  const bTop = boatY + bHalfH
+  const bBottom = boatCenterY - bHalfH
+  const bTop = boatCenterY + bHalfH
 
   // Obstacle hitbox (mesh.position is center)
   const oHalfW = (config.width * HITBOX_SHRINK) / 2

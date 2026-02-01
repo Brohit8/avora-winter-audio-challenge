@@ -49,6 +49,14 @@ const GUTTER_PHASE = 0.0
 const DEFAULT_CAMERA_POS = new THREE.Vector3(0, 3, 6)
 const DEFAULT_CAMERA_TARGET = new THREE.Vector3(0, 0, 0)
 
+// Camera animation settings
+const CAMERA_ANIMATION_DURATION = 2000 // 2 seconds in ms
+
+// Ease-out cubic for smooth deceleration
+function easeOutCubic(t: number): number {
+  return 1 - Math.pow(1 - t, 3)
+}
+
 // World scroll speed (units per second)
 const WORLD_SCROLL_SPEED = 3
 
@@ -117,6 +125,7 @@ export function Visualizer({
   const obstaclesRef = useRef<Obstacle[]>([])
   const lastObstacleWorldXRef = useRef<number>(0)
   const obstacleHistoryRef = useRef<ObstacleType[]>([])
+  const animationStartTimeRef = useRef<number>(0)
 
   // Keyboard controls for jump (spacebar) and dive (down arrow)
   useEffect(() => {
@@ -157,6 +166,11 @@ export function Visualizer({
 
   // Game actions
   const handleStartRace = useCallback(() => {
+    // Reset camera to default position
+    if (cameraRef.current) {
+      cameraRef.current.position.copy(DEFAULT_CAMERA_POS)
+      cameraRef.current.lookAt(DEFAULT_CAMERA_TARGET)
+    }
     // Reset boat position and world offset when starting countdown
     if (boatRef.current) boatRef.current.position.x = BOAT_X
     worldOffsetRef.current = 0
@@ -191,7 +205,8 @@ export function Visualizer({
   }, [])
 
   const handleGameOver = useCallback(() => {
-    setScreen('gameOver')
+    animationStartTimeRef.current = performance.now()
+    setScreen('gameOver_animation')
   }, [])
 
   // Effect 1: Scene Setup (only re-runs when dimensions change)
@@ -536,6 +551,43 @@ export function Visualizer({
       } else {
         // Hide wind swirls when not racing
         windSwirlsRef.current.forEach(sprite => sprite.visible = false)
+      }
+
+      // Camera pan animation during game over
+      if (screen === 'gameOver_animation' && boat && camera) {
+        const animationElapsed = performance.now() - animationStartTimeRef.current
+        const progress = Math.min(animationElapsed / CAMERA_ANIMATION_DURATION, 1)
+        const easedProgress = easeOutCubic(progress)
+
+        // Target camera position: close to boat, slightly elevated, from the side
+        const targetPos = new THREE.Vector3(
+          boat.position.x + 1.5,  // Slightly ahead of boat
+          boat.position.y + 0.8,  // Above boat level
+          boat.position.z + 2.5   // From the side
+        )
+
+        // Look at the boat
+        const targetLookAt = new THREE.Vector3(
+          boat.position.x,
+          boat.position.y + 0.2,
+          boat.position.z
+        )
+
+        // Lerp camera position
+        camera.position.lerpVectors(DEFAULT_CAMERA_POS, targetPos, easedProgress)
+
+        // Lerp lookAt target
+        const currentLookAt = new THREE.Vector3().lerpVectors(
+          DEFAULT_CAMERA_TARGET,
+          targetLookAt,
+          easedProgress
+        )
+        camera.lookAt(currentLookAt)
+
+        // Transition to game over screen after animation completes
+        if (progress >= 1) {
+          setScreen('gameOver')
+        }
       }
 
       // Reset boat position and camera when in setup
