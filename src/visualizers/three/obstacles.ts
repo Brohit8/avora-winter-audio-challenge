@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { getGerstnerDisplacement, getGerstnerNormal } from './gerstnerWaves'
 
 // Obstacle type definitions
-export type ObstacleType = 'SPIRAL' | 'ROCK_LARGE' | 'BIRD'
+export type ObstacleType = 'SPIRAL' | 'ROCK_LARGE' | 'TOOTHBRUSH'
 
 interface ObstacleConfig {
   width: number
@@ -30,12 +30,12 @@ const OBSTACLE_CONFIGS: Record<ObstacleType, ObstacleConfig> = {
     baseY: 0.25,  // Adjusted for water at Y=0.35
     floatsOnWater: true,
   },
-  BIRD: {
-    width: 0.5,
-    height: 0.2,
-    depth: 0.8,
-    color: 0x2a2a2a,
-    baseY: 1.0,  // Adjusted for higher boat position
+  TOOTHBRUSH: {
+    width: 0.8,
+    height: 0.3,
+    depth: 0.3,
+    color: 0x4488ff,  // Blue color for toothbrush (fallback)
+    baseY: 1.0,  // Flies above boat level
     floatsOnWater: false,
   },
 }
@@ -98,10 +98,66 @@ function cloneSpiralModel(): THREE.Group {
   return outerGroup
 }
 
+// =============================================================================
+// Toothbrush Model Configuration
+// =============================================================================
+
+// Adjust this to change the toothbrush size
+const TOOTHBRUSH_SCALE = 0.20
+
+// Cached toothbrush model - set once after loading, cloned for each obstacle
+let cachedToothbrushModel: THREE.Group | null = null
+
+/**
+ * Set the toothbrush model after loading. Call once at scene setup.
+ * Applies scale and shadows - orientation is applied per-clone.
+ */
+export function setToothbrushModel(model: THREE.Group): void {
+  model.scale.set(TOOTHBRUSH_SCALE, TOOTHBRUSH_SCALE, TOOTHBRUSH_SCALE)
+  model.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      child.castShadow = true
+      child.receiveShadow = true
+    }
+  })
+  cachedToothbrushModel = model
+}
+
+/**
+ * Clone the cached toothbrush model.
+ * Oriented horizontally, bristles forward like it's flying at the player.
+ */
+function cloneToothbrushModel(): THREE.Group {
+  const outerGroup = new THREE.Group()
+
+  if (!cachedToothbrushModel) {
+    // Fallback: simple capsule if model not loaded yet
+    const geometry = new THREE.CapsuleGeometry(0.05, 0.4, 4, 8)
+    const material = new THREE.MeshStandardMaterial({ color: 0x4488ff })
+    const mesh = new THREE.Mesh(geometry, material)
+    mesh.rotation.z = Math.PI / 2  // Horizontal orientation
+    mesh.castShadow = true
+    outerGroup.add(mesh)
+    return outerGroup
+  }
+
+  const innerModel = cachedToothbrushModel.clone()
+  innerModel.rotation.x = Math.PI  // Bristles facing down toward water
+  innerModel.rotation.y = 3 * Math.PI / 2  // Handle pointing left, bristles right
+  outerGroup.add(innerModel)
+
+  return outerGroup
+}
+
 export function createObstacleMesh(type: ObstacleType): THREE.Mesh | THREE.Group {
   // Use cached spiral model for SPIRAL type
   if (type === 'SPIRAL') {
     return cloneSpiralModel()
+  }
+
+  // Use cached toothbrush model for TOOTHBRUSH type
+  if (type === 'TOOTHBRUSH') {
+    return cloneToothbrushModel()
   }
 
   // Fallback to box geometry for other types
@@ -172,7 +228,7 @@ export function getJumpObstacleTypes(): ObstacleType[] {
 }
 
 export function getDiveObstacleTypes(): ObstacleType[] {
-  return ['BIRD']
+  return ['TOOTHBRUSH']
 }
 
 // Forgiving hitbox shrink factor (0.6 = 40% smaller than visual)

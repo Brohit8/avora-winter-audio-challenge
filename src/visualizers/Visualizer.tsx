@@ -26,6 +26,7 @@ import {
   getDiveObstacleTypes,
   checkCollision,
   setSpiralModel,
+  setToothbrushModel,
   type Obstacle,
   type ObstacleType,
 } from './three/obstacles'
@@ -339,6 +340,18 @@ export function Visualizer({
       undefined,
       (error) => {
         console.error('Error loading spiral model:', error)
+      }
+    )
+
+    // Load toothbrush model once - cached and cloned for each obstacle
+    loader.load(
+      '/models/toothbrush.glb',
+      (gltf) => {
+        setToothbrushModel(gltf.scene)
+      },
+      undefined,
+      (error) => {
+        console.error('Error loading toothbrush model:', error)
       }
     )
 
