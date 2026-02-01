@@ -44,15 +44,15 @@ const GUTTER_Z = 0
 const GUTTER_PHASE = 0.0
 
 // Camera settings
-const DEFAULT_CAMERA_POS = new THREE.Vector3(0, 5, 10)
+const DEFAULT_CAMERA_POS = new THREE.Vector3(0, 3, 6)
 const DEFAULT_CAMERA_TARGET = new THREE.Vector3(0, 0, 0)
 
 // World scroll speed (units per second)
 const WORLD_SCROLL_SPEED = 3
 
 // Jump physics
-const JUMP_VELOCITY = 8
-const GRAVITY = 25
+const JUMP_VELOCITY = 10
+const GRAVITY = 30
 
 // Dive physics
 const DIVE_DEPTH = -0.6
@@ -210,8 +210,8 @@ export function Visualizer({
 
     // === Camera Setup ===
     const camera = new THREE.PerspectiveCamera(75, size.width / size.height, 0.1, 1000)
-    camera.position.set(0, 5, 10)
-    camera.lookAt(0, 0, 0)
+    camera.position.copy(DEFAULT_CAMERA_POS)
+    camera.lookAt(DEFAULT_CAMERA_TARGET)
     cameraRef.current = camera
 
     // === Renderer Setup ===
@@ -268,7 +268,7 @@ export function Visualizer({
         enableShadows(boat)
         applySailMaterial(boat, sailMaterial)
         boat.position.set(BOAT_X, BOAT_BASE_Y, GUTTER_Z)
-        boat.scale.set(0.5, 0.5, 0.5)
+        boat.scale.set(0.35, 0.35, 0.35)
         boat.rotation.y = Math.PI / 2
         scene.add(boat)
         boatRef.current = boat
