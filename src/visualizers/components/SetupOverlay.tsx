@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { FrequencyDivisionSlider } from './FrequencyDivisionSlider'
 import { baseOverlayStyle } from './overlayStyles'
 
@@ -6,6 +7,13 @@ interface SetupOverlayProps {
   onDivisionChange: (bin: number) => void
   onStartRace: () => void
   onRequestMic: () => Promise<void>
+}
+
+// Detect mobile via touch capability and screen width
+function isMobileDevice(): boolean {
+  const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+  const isNarrow = window.innerWidth < 768
+  return hasTouch && isNarrow
 }
 
 const overlayStyle: React.CSSProperties = {
@@ -50,15 +58,36 @@ const buttonStyle: React.CSSProperties = {
   minWidth: '160px',
 }
 
+const errorStyle: React.CSSProperties = {
+  color: '#ff6b6b',
+  fontSize: 'clamp(0.75rem, 2vw, 0.875rem)',
+  textAlign: 'center',
+  maxWidth: '280px',
+  margin: '8px 0 0 0',
+}
+
 export function SetupOverlay({
   divisionBin,
   onDivisionChange,
   onStartRace,
   onRequestMic,
 }: SetupOverlayProps) {
+  const [micError, setMicError] = useState<string | null>(null)
+
   const handleStartClick = async () => {
-    await onRequestMic()
-    onStartRace()
+    setMicError(null)
+    try {
+      await onRequestMic()
+      onStartRace()
+    } catch {
+      // Mic rejected - check if mobile or desktop
+      if (isMobileDevice()) {
+        setMicError('Microphone access is required to play on mobile devices.')
+      } else {
+        // Desktop: proceed with keyboard controls
+        onStartRace()
+      }
+    }
   }
 
   return (
@@ -78,6 +107,8 @@ export function SetupOverlay({
       <button style={buttonStyle} onClick={handleStartClick}>
         Start
       </button>
+
+      {micError && <p style={errorStyle}>{micError}</p>}
     </div>
   )
 }
