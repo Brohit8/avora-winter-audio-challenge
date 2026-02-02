@@ -27,6 +27,8 @@ export const DIVE_SPEED = 8
 // Audio Thresholds
 export const ACTION_THRESHOLD = 0.11
 export const ACTION_COOLDOWN = 0.3
+export const CALIBRATION_MARGIN = 0.08  // Added to ambient noise level during calibration
+export const CALIBRATION_MAX_THRESHOLD = 0.45  // Upper bound to ensure game is always playable
 
 // Score
 export const SCORE_COEFFICIENT = 3

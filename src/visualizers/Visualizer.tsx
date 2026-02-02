@@ -9,6 +9,8 @@ import {
   WORLD_SCROLL_SPEED,
   ACTION_THRESHOLD,
   NOISE_THRESHOLD,
+  CALIBRATION_MARGIN,
+  CALIBRATION_MAX_THRESHOLD,
 } from './constants'
 import {
   createPhysicsState,
@@ -101,11 +103,29 @@ export function Visualizer({
   const noiseThresholdRef = useRef(NOISE_THRESHOLD)
   const actionThresholdRef = useRef(ACTION_THRESHOLD)
 
+  // Calibration refs - track max ambient levels during countdown
+  const calibrationMaxLowRef = useRef(0)
+  const calibrationMaxHighRef = useRef(0)
+
   // Keep refs in sync with state for animation loop access
   useEffect(() => {
     noiseThresholdRef.current = noiseThreshold
     actionThresholdRef.current = actionThreshold
   }, [noiseThreshold, actionThreshold])
+
+  // Apply calibrated threshold when race starts
+  useEffect(() => {
+    if (screen === 'race') {
+      const maxAmbient = Math.max(calibrationMaxLowRef.current, calibrationMaxHighRef.current)
+      // Clamp between default minimum and max to ensure playability
+      const calibratedThreshold = Math.min(
+        CALIBRATION_MAX_THRESHOLD,
+        Math.max(ACTION_THRESHOLD, maxAmbient + CALIBRATION_MARGIN)
+      )
+      actionThresholdRef.current = calibratedThreshold
+      setActionThreshold(calibratedThreshold)
+    }
+  }, [screen])
 
   // Keyboard controls
   const { isDownKeyHeldRef } = useKeyboardControls(screen, physicsStateRef)
@@ -126,6 +146,9 @@ export function Visualizer({
     isDownKeyHeldRef.current = false
     // Clear obstacles
     obstacleManagerRef.current?.reset()
+    // Reset calibration for ambient noise measurement
+    calibrationMaxLowRef.current = 0
+    calibrationMaxHighRef.current = 0
     startCountdown()
   }, [startCountdown])
 
@@ -264,6 +287,15 @@ export function Visualizer({
       if (screen === 'setup' && boat && camera) {
         boat.position.x = BOAT_X
         resetCamera(camera, DEFAULT_CAMERA_POS, DEFAULT_CAMERA_TARGET)
+      }
+
+      // Calibration during countdown - sample ambient noise levels
+      if (screen === 'countdown' && frequencyData.current) {
+        const currentNoiseThreshold = noiseThresholdRef.current
+        const lowLoudness = getFrequencyAverage(frequencyData.current, 0, divisionBin, currentNoiseThreshold)
+        const highLoudness = getFrequencyAverage(frequencyData.current, divisionBin, MAX_SLIDER_BIN, currentNoiseThreshold)
+        calibrationMaxLowRef.current = Math.max(calibrationMaxLowRef.current, lowLoudness)
+        calibrationMaxHighRef.current = Math.max(calibrationMaxHighRef.current, highLoudness)
       }
 
       if (renderer && scene && camera) {
