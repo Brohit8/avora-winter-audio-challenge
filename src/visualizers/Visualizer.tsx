@@ -305,6 +305,7 @@ export function Visualizer({
           onDivisionChange={setDivisionBin}
           onStartRace={handleStartRace}
           onRequestMic={onRequestMic}
+          showDebugControls={DEBUG_AUDIO}
         />
       )}
 

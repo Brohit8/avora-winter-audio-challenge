@@ -7,6 +7,7 @@ interface SetupOverlayProps {
   onDivisionChange: (bin: number) => void
   onStartRace: () => void
   onRequestMic: () => Promise<void>
+  showDebugControls?: boolean
 }
 
 // Detect mobile via touch capability and screen width
@@ -90,6 +91,7 @@ export function SetupOverlay({
   onDivisionChange,
   onStartRace,
   onRequestMic,
+  showDebugControls = false,
 }: SetupOverlayProps) {
   const [micError, setMicError] = useState<string | null>(null)
   const [micActive, setMicActive] = useState(false)
@@ -139,12 +141,14 @@ export function SetupOverlay({
         onDivisionChange={onDivisionChange}
       />
 
-      {!micActive ? (
-        <button style={testMicButtonStyle} onClick={handleTestMic}>
-          Test Microphone
-        </button>
-      ) : (
-        <span style={micActiveStyle}>Mic Active</span>
+      {showDebugControls && (
+        !micActive ? (
+          <button style={testMicButtonStyle} onClick={handleTestMic}>
+            Test Microphone
+          </button>
+        ) : (
+          <span style={micActiveStyle}>Mic Active</span>
+        )
       )}
 
       <button style={buttonStyle} onClick={handleStartClick}>
