@@ -1,5 +1,3 @@
-import type { FrequencyRange } from './types'
-
 // Audio Processing
 export const NOISE_THRESHOLD = 80
 export const MAX_AUDIO_VALUE = 255
@@ -7,7 +5,6 @@ export const HZ_PER_BIN = 21.5
 
 // Frequency Slider
 export const MAX_SLIDER_BIN = 200
-export const DEFAULT_RED_RANGE: FrequencyRange = { start: 56, end: 200 }
 
 // Scene Layout
 export const BOAT_X = -1.5

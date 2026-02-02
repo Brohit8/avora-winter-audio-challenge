@@ -29,10 +29,3 @@ export function applySailMaterial(
   })
 }
 
-export function makeUnlit(object: THREE.Object3D): void {
-  object.traverse((child) => {
-    if (child instanceof THREE.Mesh) {
-      child.material = new THREE.MeshBasicMaterial({ vertexColors: true })
-    }
-  })
-}

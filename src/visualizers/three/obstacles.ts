@@ -214,10 +214,6 @@ export function isObstacleOffScreen(obstacle: Obstacle, worldOffset: number): bo
   return screenX < -5
 }
 
-export function getObstacleConfig(type: ObstacleType): ObstacleConfig {
-  return OBSTACLE_CONFIGS[type]
-}
-
 export function getJumpObstacleTypes(): ObstacleType[] {
   return ['SPIRAL', 'MOLAR']
 }

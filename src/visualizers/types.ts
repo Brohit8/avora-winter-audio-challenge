@@ -1,14 +1,7 @@
 import type { RefObject } from 'react'
 
 // Game state
-export type Screen = 'setup' | 'countdown' | 'race' | 'win_animation' | 'winner' | 'gameOver_animation' | 'gameOver'
-export type BoatColor = 'red'
-
-// Frequency range for boat assignment (FFT bin indices)
-export interface FrequencyRange {
-  start: number
-  end: number
-}
+export type Screen = 'setup' | 'countdown' | 'race' | 'gameOver_animation' | 'gameOver'
 
 // Props passed from useAudio hook
 export interface VisualizerProps {

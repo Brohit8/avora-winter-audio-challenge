@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from 'react'
 import * as THREE from 'three'
-import type { VisualizerProps, Screen, BoatColor } from './types'
+import type { VisualizerProps, Screen } from './types'
 import {
   COLORS,
   MAX_SLIDER_BIN,
@@ -28,7 +28,6 @@ import { ScoreDisplay } from './components/ScoreDisplay'
 import { GameOverOverlay } from './components/GameOverOverlay'
 import { DEFAULT_DIVISION_BIN } from './components/FrequencyDivisionSlider'
 import { CountdownOverlay } from './components/CountdownOverlay'
-import { WinnerOverlay } from './components/WinnerOverlay'
 import { createWindSwirlSprites, updateWindSwirls, disposeWindSwirls } from './three/windSwirls'
 import { createSandTerrain } from './three/sandTerrain'
 import { getGerstnerDisplacement, getGerstnerNormal } from './three/gerstnerWaves'
@@ -74,7 +73,6 @@ export function Visualizer({
   // Game state
   const [screen, setScreen] = useState<Screen>('setup')
   const [divisionBin, setDivisionBin] = useState<number>(DEFAULT_DIVISION_BIN)
-  const [winner, setWinner] = useState<BoatColor | null>(null)
   const [score, setScore] = useState<number>(0)
   const [highScore, setHighScore] = useState<number>(() => {
     const saved = localStorage.getItem(HIGH_SCORE_KEY)
@@ -147,16 +145,10 @@ export function Visualizer({
     obstacleManagerRef.current?.reset()
     setScore(0)
     setScreen('countdown')
-    setWinner(null)
   }, [])
 
   const handleCountdownComplete = useCallback(() => {
     setScreen('race')
-  }, [])
-
-  const handleRaceAgain = useCallback(() => {
-    setScreen('setup')
-    setWinner(null)
   }, [])
 
   const handleGameOver = useCallback(() => {
@@ -441,7 +433,7 @@ export function Visualizer({
     return () => {
       cancelAnimationFrame(frameId)
     }
-  }, [screen, divisionBin, frequencyData, winner, handleGameOver])
+  }, [screen, divisionBin, frequencyData, handleGameOver])
 
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100dvh' }}>
@@ -462,13 +454,6 @@ export function Visualizer({
 
       {screen === 'countdown' && (
         <CountdownOverlay onComplete={handleCountdownComplete} />
-      )}
-
-      {screen === 'winner' && winner && (
-        <WinnerOverlay
-          winner={winner}
-          onRaceAgain={handleRaceAgain}
-        />
       )}
 
       {screen === 'gameOver' && (
