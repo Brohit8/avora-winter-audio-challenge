@@ -10,7 +10,7 @@ import {
   BOAT_HITBOX_HEIGHT,
   GUTTER_Z,
   GUTTER_PHASE,
-} from './constants'
+} from '../constants'
 import {
   createObstacle,
   updateObstacle,
@@ -21,7 +21,7 @@ import {
   disposeObstacle,
   type Obstacle,
   type ObstacleType,
-} from './three/obstacles'
+} from '../three/obstacles'
 
 // Manages obstacle spawning, updating, collision detection, and cleanup
 export class ObstacleManager {

@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { CAMERA_ANIMATION_DURATION } from './constants'
+import { CAMERA_ANIMATION_DURATION } from '../constants'
 
 // Reusable Vector3 objects (avoids GC pressure)
 const _targetPos = new THREE.Vector3()

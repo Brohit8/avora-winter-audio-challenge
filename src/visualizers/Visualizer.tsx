@@ -21,7 +21,7 @@ import {
   checkAudioTriggers,
   updatePhysics,
   type PhysicsState,
-} from './physics'
+} from './game/physics'
 import { getFrequencyAverage } from './utils/audio'
 import { SetupOverlay } from './components/SetupOverlay'
 import { ScoreDisplay } from './components/ScoreDisplay'
@@ -35,8 +35,8 @@ import { createGutter } from './three/gutter'
 import { enableShadows, applySailMaterial } from './three/models'
 import { createClouds, updateClouds, type CloudSystem } from './three/clouds'
 import { loadAllAssets } from './three/AssetLoader'
-import { ObstacleManager } from './ObstacleManager'
-import { updateGameOverCamera, resetCamera } from './cameraAnimation'
+import { ObstacleManager } from './game/ObstacleManager'
+import { updateGameOverCamera, resetCamera } from './game/cameraAnimation'
 
 // Scene constants (use THREE.Vector3, so kept separate from constants.ts)
 const DEFAULT_CAMERA_POS = new THREE.Vector3(0, 3, 6)

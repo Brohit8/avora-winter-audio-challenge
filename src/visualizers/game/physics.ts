@@ -5,7 +5,7 @@ import {
   DIVE_SPEED,
   ACTION_THRESHOLD,
   ACTION_COOLDOWN,
-} from './constants'
+} from '../constants'
 
 // Physics state for jump/dive mechanics
 export interface PhysicsState {
