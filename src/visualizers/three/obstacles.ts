@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { getGerstnerDisplacement, getGerstnerNormal } from './gerstnerWaves'
+import { enableShadows } from './models'
 
 // Obstacle type definitions
 export type ObstacleType = 'SPIRAL' | 'MOLAR' | 'TOOTHBRUSH'
@@ -54,12 +55,7 @@ let cachedSpiralModel: THREE.Group | null = null
 
 export function setSpiralModel(model: THREE.Group): void {
   model.scale.set(SPIRAL_SCALE, SPIRAL_SCALE, SPIRAL_SCALE)
-  model.traverse((child) => {
-    if (child instanceof THREE.Mesh) {
-      child.castShadow = true
-      child.receiveShadow = true
-    }
-  })
+  enableShadows(model)
   cachedSpiralModel = model
 }
 
@@ -91,12 +87,7 @@ let cachedToothbrushModel: THREE.Group | null = null
 
 export function setToothbrushModel(model: THREE.Group): void {
   model.scale.set(TOOTHBRUSH_SCALE, TOOTHBRUSH_SCALE, TOOTHBRUSH_SCALE)
-  model.traverse((child) => {
-    if (child instanceof THREE.Mesh) {
-      child.castShadow = true
-      child.receiveShadow = true
-    }
-  })
+  enableShadows(model)
   cachedToothbrushModel = model
 }
 
@@ -129,12 +120,7 @@ let cachedMolarModel: THREE.Group | null = null
 
 export function setMolarModel(model: THREE.Group): void {
   model.scale.set(MOLAR_SCALE, MOLAR_SCALE, MOLAR_SCALE)
-  model.traverse((child) => {
-    if (child instanceof THREE.Mesh) {
-      child.castShadow = true
-      child.receiveShadow = true
-    }
-  })
+  enableShadows(model)
   cachedMolarModel = model
 }
 
