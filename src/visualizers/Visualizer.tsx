@@ -13,13 +13,6 @@ import {
   ACTION_THRESHOLD,
   SCORE_COEFFICIENT,
   HIGH_SCORE_KEY,
-  OBSTACLE_SPAWN_DELAY,
-  OBSTACLE_MIN_GAP,
-  OBSTACLE_GAP_VARIANCE,
-  OBSTACLE_SPAWN_DISTANCE,
-  MAX_OBSTACLE_DUPLICATION,
-  BOAT_HITBOX_WIDTH,
-  BOAT_HITBOX_HEIGHT,
 } from './constants'
 import {
   createPhysicsState,
@@ -42,19 +35,9 @@ import { createSandTerrain } from './three/sandTerrain'
 import { getGerstnerDisplacement, getGerstnerNormal } from './three/gerstnerWaves'
 import { createGutter } from './three/gutter'
 import { enableShadows, applySailMaterial } from './three/models'
-import {
-  createObstacle,
-  updateObstacle,
-  isObstacleOffScreen,
-  getJumpObstacleTypes,
-  getDiveObstacleTypes,
-  checkCollision,
-  disposeObstacle,
-  type Obstacle,
-  type ObstacleType,
-} from './three/obstacles'
 import { createClouds, updateClouds, type CloudSystem } from './three/clouds'
 import { loadAllAssets } from './three/AssetLoader'
+import { ObstacleManager } from './ObstacleManager'
 
 // =============================================================================
 // Scene Constants (not in constants.ts because they use THREE.Vector3)
@@ -111,9 +94,7 @@ export function Visualizer({
   const lastFrameTimeRef = useRef<number>(0)
   const physicsStateRef = useRef<PhysicsState>(createPhysicsState())
   const isDownKeyHeldRef = useRef<boolean>(false)  // Track if down arrow is held
-  const obstaclesRef = useRef<Obstacle[]>([])
-  const lastObstacleWorldXRef = useRef<number>(0)
-  const obstacleHistoryRef = useRef<ObstacleType[]>([])
+  const obstacleManagerRef = useRef<ObstacleManager | null>(null)
   const animationStartTimeRef = useRef<number>(0)
   const cloudSystemRef = useRef<CloudSystem | null>(null)
 
@@ -162,16 +143,7 @@ export function Visualizer({
     resetPhysicsState(physicsStateRef.current)
     isDownKeyHeldRef.current = false
     // Clear obstacles
-    const scene = sceneRef.current
-    if (scene) {
-      obstaclesRef.current.forEach(obs => {
-        scene.remove(obs.mesh)
-        disposeObstacle(obs)
-      })
-    }
-    obstaclesRef.current = []
-    lastObstacleWorldXRef.current = 0
-    obstacleHistoryRef.current = []
+    obstacleManagerRef.current?.reset()
     setScore(0)
     setScreen('countdown')
     setWinner(null)
@@ -212,6 +184,10 @@ export function Visualizer({
     const scene = new THREE.Scene()
     scene.background = new THREE.Color(0xc7e8ef)
     sceneRef.current = scene
+
+    // === Obstacle Manager ===
+    const obstacleManager = new ObstacleManager(scene)
+    obstacleManagerRef.current = obstacleManager
 
     // === Sand Terrain with Bumps ===
     // Large enough that edges are outside the camera's visible area
@@ -429,79 +405,21 @@ export function Visualizer({
         // Update score based on distance traveled
         setScore(Math.floor(worldOffsetRef.current * SCORE_COEFFICIENT))
 
-        // Obstacle spawning
+        // Obstacle management
         const worldOffset = worldOffsetRef.current
-        const timeSinceStart = worldOffset / WORLD_SCROLL_SPEED
+        const obstacleManager = obstacleManagerRef.current
+        if (obstacleManager) {
+          obstacleManager.trySpawn(worldOffset)
+          obstacleManager.updateAll(worldOffset, elapsed)
 
-        if (timeSinceStart > OBSTACLE_SPAWN_DELAY) {
-          const spawnThreshold = worldOffset + OBSTACLE_SPAWN_DISTANCE
-          const lastWorldX = lastObstacleWorldXRef.current
-          const gap = OBSTACLE_MIN_GAP + Math.random() * OBSTACLE_GAP_VARIANCE
-
-          if (lastWorldX === 0 || spawnThreshold > lastWorldX + gap) {
-            // Pick random obstacle type
-            const allTypes = [...getJumpObstacleTypes(), ...getDiveObstacleTypes()]
-            let selectedType: ObstacleType
-
-            // Avoid too many duplicates
-            const history = obstacleHistoryRef.current
-            const lastType = history[history.length - 1]
-            let consecutiveCount = 0
-            for (let i = history.length - 1; i >= 0; i--) {
-              if (history[i] === lastType) consecutiveCount++
-              else break
-            }
-
-            if (consecutiveCount >= MAX_OBSTACLE_DUPLICATION) {
-              // Pick a different type
-              const otherTypes = allTypes.filter(t => t !== lastType)
-              selectedType = otherTypes[Math.floor(Math.random() * otherTypes.length)]
-            } else {
-              selectedType = allTypes[Math.floor(Math.random() * allTypes.length)]
-            }
-
-            // Create and add obstacle
-            const obstacle = createObstacle(selectedType, spawnThreshold)
-            scene!.add(obstacle.mesh)
-            obstaclesRef.current.push(obstacle)
-            lastObstacleWorldXRef.current = spawnThreshold
-            obstacleHistoryRef.current.push(selectedType)
-
-            // Keep history small
-            if (obstacleHistoryRef.current.length > 10) {
-              obstacleHistoryRef.current.shift()
-            }
+          // Check collision with obstacles
+          if (boat && obstacleManager.checkBoatCollision(boat.position.x, boat.position.y)) {
+            handleGameOver()
+            return // Stop animation loop
           }
+
+          obstacleManager.removeOffScreen(worldOffset)
         }
-
-        // Update all obstacles
-        obstaclesRef.current.forEach(obstacle => {
-          updateObstacle(obstacle, worldOffset, elapsed, GUTTER_Z, GUTTER_PHASE)
-        })
-
-        // Check collision with obstacles
-        if (boat) {
-          for (const obstacle of obstaclesRef.current) {
-            if (checkCollision(
-              boat.position.x,
-              boat.position.y,
-              BOAT_HITBOX_WIDTH,
-              BOAT_HITBOX_HEIGHT,
-              obstacle
-            )) {
-              handleGameOver()
-              return // Stop animation loop
-            }
-          }
-        }
-
-        // Remove off-screen obstacles
-        const toRemove = obstaclesRef.current.filter(obs => isObstacleOffScreen(obs, worldOffset))
-        toRemove.forEach(obs => {
-          scene!.remove(obs.mesh)
-          disposeObstacle(obs)
-        })
-        obstaclesRef.current = obstaclesRef.current.filter(obs => !isObstacleOffScreen(obs, worldOffset))
 
         // Update wind swirls (positioned relative to boat)
         if (frequencyData.current && boat) {
