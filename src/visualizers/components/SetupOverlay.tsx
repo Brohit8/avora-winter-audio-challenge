@@ -76,7 +76,7 @@ export function SetupOverlay({
 
   return (
     <div style={overlayStyle}>
-      <h1 style={titleStyle}>Sonic Raingutter Regatta</h1>
+      <h1 style={titleStyle}>Avora Raingutter Regatta</h1>
 
       <p style={instructionsStyle}>
         Create wind with your voice!<br />
