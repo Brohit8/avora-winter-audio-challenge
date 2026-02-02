@@ -235,7 +235,9 @@ export function Visualizer({
         resetCamera(camera, DEFAULT_CAMERA_POS, DEFAULT_CAMERA_TARGET)
       }
 
-      renderer!.render(scene!, camera!)
+      if (renderer && scene && camera) {
+        renderer.render(scene, camera)
+      }
       frameId = requestAnimationFrame(animate)
     }
 

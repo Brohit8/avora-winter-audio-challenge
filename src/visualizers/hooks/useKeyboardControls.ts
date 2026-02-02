@@ -12,12 +12,14 @@ export function useKeyboardControls(
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (screen !== 'race') return
+      const physics = physicsStateRef.current
+      if (!physics) return
 
       if (e.code === 'Space' && !e.repeat) {
-        triggerJump(physicsStateRef.current!)
+        triggerJump(physics)
         e.preventDefault()
       } else if (e.code === 'ArrowDown') {
-        triggerDive(physicsStateRef.current!)
+        triggerDive(physics)
         isDownKeyHeldRef.current = true
         e.preventDefault()
       }
