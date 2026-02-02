@@ -5,6 +5,27 @@ import type { VisualizerProps, Screen, BoatColor } from './types'
 import {
   COLORS,
   MAX_SLIDER_BIN,
+  BOAT_X,
+  BOAT_BASE_Y,
+  GUTTER_Z,
+  GUTTER_PHASE,
+  CAMERA_ANIMATION_DURATION,
+  WORLD_SCROLL_SPEED,
+  JUMP_VELOCITY,
+  GRAVITY,
+  DIVE_DEPTH,
+  DIVE_SPEED,
+  ACTION_THRESHOLD,
+  ACTION_COOLDOWN,
+  SCORE_COEFFICIENT,
+  HIGH_SCORE_KEY,
+  OBSTACLE_SPAWN_DELAY,
+  OBSTACLE_MIN_GAP,
+  OBSTACLE_GAP_VARIANCE,
+  OBSTACLE_SPAWN_DISTANCE,
+  MAX_OBSTACLE_DUPLICATION,
+  BOAT_HITBOX_WIDTH,
+  BOAT_HITBOX_HEIGHT,
 } from './constants'
 import { getFrequencyAverage } from './utils/audio'
 import { SetupOverlay } from './components/SetupOverlay'
@@ -34,62 +55,16 @@ import {
 import { createClouds, updateClouds, type CloudSystem } from './three/clouds'
 
 // =============================================================================
-// 3D Scene Layout (module-specific constants)
+// Scene Constants (not in constants.ts because they use THREE.Vector3)
 // =============================================================================
 
-// Boat fixed X position
-const BOAT_X = -1.5
-
-// Boat base Y position (lower = more submerged, higher = floating)
-const BOAT_BASE_Y = 0.35  // Adjusted for water at Y=0.35
-
-// Gutter position (z-axis) - single centered gutter
-const GUTTER_Z = 0
-
-// Wave phase offset
-const GUTTER_PHASE = 0.0
-
-// Camera settings
 const DEFAULT_CAMERA_POS = new THREE.Vector3(0, 3, 6)
 const DEFAULT_CAMERA_TARGET = new THREE.Vector3(0, 0, 0)
-
-// Camera animation settings
-const CAMERA_ANIMATION_DURATION = 2000 // 2 seconds in ms
 
 // Ease-out cubic for smooth deceleration
 function easeOutCubic(t: number): number {
   return 1 - Math.pow(1 - t, 3)
 }
-
-// World scroll speed (units per second)
-const WORLD_SCROLL_SPEED = 3
-
-// Jump physics
-const JUMP_VELOCITY = 10
-const GRAVITY = 30
-
-// Dive physics
-const DIVE_DEPTH = -0.6
-const DIVE_SPEED = 8
-
-// Audio thresholds
-const ACTION_THRESHOLD = 0.25
-const ACTION_COOLDOWN = 0.3
-
-// Score
-const SCORE_COEFFICIENT = 3
-const HIGH_SCORE_KEY = 'sonicSurf_highScore'
-
-// Obstacles
-const OBSTACLE_SPAWN_DELAY = 3      // Seconds before first obstacle
-const OBSTACLE_MIN_GAP = 4          // Minimum world units between obstacles
-const OBSTACLE_GAP_VARIANCE = 3     // Random extra gap
-const OBSTACLE_SPAWN_DISTANCE = 8   // How far ahead to spawn (off right side of screen)
-const MAX_OBSTACLE_DUPLICATION = 2  // Max same type in a row
-
-// Boat collision hitbox (approximate dimensions at 0.35 scale)
-const BOAT_HITBOX_WIDTH = 0.8
-const BOAT_HITBOX_HEIGHT = 0.6
 
 /**
  * Visualizer - Three.js boat race visualizer with game logic
