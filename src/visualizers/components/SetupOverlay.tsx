@@ -92,7 +92,7 @@ export function SetupOverlay({
 
   return (
     <div style={overlayStyle}>
-      <h1 style={titleStyle}>Sonic Surf</h1>
+      <h1 style={titleStyle}>Avora Surf</h1>
 
       <p style={instructionsStyle}>
         Hum/Sing to duck. Whistle/Snap to jump.<br />
