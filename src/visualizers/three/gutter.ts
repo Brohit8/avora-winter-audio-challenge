@@ -1,22 +1,17 @@
 import * as THREE from 'three'
 import { waterVertexShader, waterFragmentShader } from './gerstnerWaves'
 
-/**
- * River water surface factory
- * Creates animated water with a deep water layer beneath
- */
+// River water surface with animated Gerstner waves
 
-// River geometry constants
-const RIVER_LENGTH = 80  // Extended to span well beyond any camera view
-const WATER_WIDTH = 2.5  // Wider for river appearance
-const WATER_SEGMENTS_X = 200  // More segments for longer water
+const RIVER_LENGTH = 80
+const WATER_WIDTH = 2.5
+const WATER_SEGMENTS_X = 200
 const WATER_SEGMENTS_Z = 20
 const WATER_Y = 0.35
 
-// Deep water layer (box that fills gap between wave troughs and ground)
-const DEEP_WATER_HEIGHT = 0.4  // Thickness of the fill layer
-const DEEP_WATER_Y = 0.15  // Center of box - top at ~0.35, bottom at ~-0.05
-const DEEP_WATER_COLOR = 0x1a8a9a  // Lighter teal to blend with wave troughs
+const DEEP_WATER_HEIGHT = 0.4
+const DEEP_WATER_Y = 0.15
+const DEEP_WATER_COLOR = 0x1a8a9a
 
 const WATER_COLOR = 0x00abbf
 const HIGHLIGHT_COLOR = 0xffffff
@@ -27,22 +22,19 @@ export interface GutterResources {
   dispose: () => void
 }
 
-/**
- * Create river water surface and add it to the scene
- */
 export function createGutter(
   scene: THREE.Scene,
   gutterZ: number,
   phase: number
 ): GutterResources {
-  // Deep water layer (box that fills gap between wave troughs and ground)
+  // Deep water fill layer
   const deepWaterGeometry = new THREE.BoxGeometry(RIVER_LENGTH, DEEP_WATER_HEIGHT, WATER_WIDTH)
   const deepWaterMaterial = new THREE.MeshBasicMaterial({ color: DEEP_WATER_COLOR })
   const deepWater = new THREE.Mesh(deepWaterGeometry, deepWaterMaterial)
   deepWater.position.set(0, DEEP_WATER_Y, gutterZ)
   scene.add(deepWater)
 
-  // Animated water surface
+  // Wave surface
   const waterGeometry = new THREE.PlaneGeometry(
     RIVER_LENGTH,
     WATER_WIDTH,
@@ -72,7 +64,6 @@ export function createGutter(
   water.receiveShadow = true
   scene.add(water)
 
-  // Return resources for animation and cleanup
   return {
     waterMaterial,
     dispose: () => {

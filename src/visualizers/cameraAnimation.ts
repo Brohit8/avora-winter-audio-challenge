@@ -1,12 +1,11 @@
 import * as THREE from 'three'
 import { CAMERA_ANIMATION_DURATION } from './constants'
 
-// Reusable Vector3 objects for camera animation (avoids garbage collection)
+// Reusable Vector3 objects (avoids GC pressure)
 const _targetPos = new THREE.Vector3()
 const _targetLookAt = new THREE.Vector3()
 const _currentLookAt = new THREE.Vector3()
 
-// Ease-out cubic for smooth deceleration
 function easeOutCubic(t: number): number {
   return 1 - Math.pow(1 - t, 3)
 }
@@ -16,10 +15,7 @@ export interface CameraAnimationResult {
   isComplete: boolean
 }
 
-/**
- * Animate camera for game-over sequence.
- * Smoothly pans camera to focus on the boat.
- */
+// Animate camera to focus on boat during game-over
 export function updateGameOverCamera(
   camera: THREE.PerspectiveCamera,
   boat: THREE.Group,
@@ -58,9 +54,7 @@ export function updateGameOverCamera(
   }
 }
 
-/**
- * Reset camera to default position
- */
+// Reset camera to default position
 export function resetCamera(
   camera: THREE.PerspectiveCamera,
   defaultPos: THREE.Vector3,

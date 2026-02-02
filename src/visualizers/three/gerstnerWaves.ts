@@ -1,24 +1,20 @@
-/**
- * Gerstner Waves
- * Realistic ocean wave simulation using sum of trochoid waves.
- * Vertices move in elliptical orbits, creating sharp crests and flat troughs.
- */
+// Gerstner wave simulation (trochoid waves)
 
 interface GerstnerWave {
-  dir: [number, number]  // Direction vector (will be normalized)
-  steepness: number      // Wave sharpness (0 = sine wave, ~1 = max)
-  wavelength: number     // Distance between crests
-  speed: number          // Wave travel speed
+  dir: [number, number]
+  steepness: number
+  wavelength: number
+  speed: number
 }
 
 const GERSTNER_WAVES: GerstnerWave[] = [
-  { dir: [1.0, 0.0], steepness: 0.12, wavelength: 4.0, speed: 1.2 },   // Primary wave
-  { dir: [0.7, 0.7], steepness: 0.08, wavelength: 2.5, speed: 1.5 },   // Diagonal
-  { dir: [0.9, -0.4], steepness: 0.06, wavelength: 1.8, speed: 1.8 },  // Cross wave
-  { dir: [-0.3, 0.95], steepness: 0.04, wavelength: 1.2, speed: 2.2 }, // Perpendicular chop
+  { dir: [1.0, 0.0], steepness: 0.12, wavelength: 4.0, speed: 1.2 },
+  { dir: [0.7, 0.7], steepness: 0.08, wavelength: 2.5, speed: 1.5 },
+  { dir: [0.9, -0.4], steepness: 0.06, wavelength: 1.8, speed: 1.8 },
+  { dir: [-0.3, 0.95], steepness: 0.04, wavelength: 1.2, speed: 2.2 },
 ]
 
-// Pre-compute normalized directions and angular frequencies
+// Pre-computed wave data
 const WAVES_PROCESSED = GERSTNER_WAVES.map((w, i) => {
   const len = Math.sqrt(w.dir[0] ** 2 + w.dir[1] ** 2)
   const dx = w.dir[0] / len
@@ -88,12 +84,8 @@ export const waterFragmentShader = `
   }
 `
 
-// CPU-side wave calculations
+// CPU-side wave calculations (mirrors shader for object positioning)
 
-/**
- * Calculate wave displacement at a world position.
- * Mirrors shader logic for positioning objects on waves.
- */
 export function getGerstnerDisplacement(
   x: number,
   z: number,
@@ -115,9 +107,6 @@ export function getGerstnerDisplacement(
   return { dx, dy, dz }
 }
 
-/**
- * Calculate surface normal at a world position for object rotation
- */
 export function getGerstnerNormal(
   x: number,
   z: number,

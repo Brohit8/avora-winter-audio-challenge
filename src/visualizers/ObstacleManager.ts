@@ -23,9 +23,7 @@ import {
   type ObstacleType,
 } from './three/obstacles'
 
-/**
- * Manages obstacle spawning, updating, collision detection, and cleanup.
- */
+// Manages obstacle spawning, updating, collision detection, and cleanup
 export class ObstacleManager {
   private obstacles: Obstacle[] = []
   private lastObstacleWorldX = 0
@@ -36,9 +34,6 @@ export class ObstacleManager {
     this.scene = scene
   }
 
-  /**
-   * Reset all obstacles (e.g., when starting a new race)
-   */
   reset(): void {
     this.obstacles.forEach(obs => {
       this.scene.remove(obs.mesh)
@@ -49,9 +44,6 @@ export class ObstacleManager {
     this.obstacleHistory = []
   }
 
-  /**
-   * Try to spawn a new obstacle based on world offset
-   */
   trySpawn(worldOffset: number): void {
     const timeSinceStart = worldOffset / WORLD_SCROLL_SPEED
 
@@ -96,18 +88,12 @@ export class ObstacleManager {
     }
   }
 
-  /**
-   * Update all obstacle positions
-   */
   updateAll(worldOffset: number, elapsed: number): void {
     this.obstacles.forEach(obstacle => {
       updateObstacle(obstacle, worldOffset, elapsed, GUTTER_Z, GUTTER_PHASE)
     })
   }
 
-  /**
-   * Check if boat collides with any obstacle
-   */
   checkBoatCollision(boatX: number, boatY: number): boolean {
     for (const obstacle of this.obstacles) {
       if (checkCollision(boatX, boatY, BOAT_HITBOX_WIDTH, BOAT_HITBOX_HEIGHT, obstacle)) {
@@ -117,9 +103,6 @@ export class ObstacleManager {
     return false
   }
 
-  /**
-   * Remove obstacles that have scrolled off-screen
-   */
   removeOffScreen(worldOffset: number): void {
     const toRemove = this.obstacles.filter(obs => isObstacleOffScreen(obs, worldOffset))
     toRemove.forEach(obs => {
@@ -129,9 +112,6 @@ export class ObstacleManager {
     this.obstacles = this.obstacles.filter(obs => !isObstacleOffScreen(obs, worldOffset))
   }
 
-  /**
-   * Get current obstacles (for debugging or testing)
-   */
   getObstacles(): readonly Obstacle[] {
     return this.obstacles
   }

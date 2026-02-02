@@ -7,20 +7,15 @@ import {
   ACTION_COOLDOWN,
 } from './constants'
 
-/**
- * Boat physics state for jump/dive mechanics
- */
+// Physics state for jump/dive mechanics
 export interface PhysicsState {
   velocityY: number
   isJumping: boolean
   isDiving: boolean
-  diveProgress: number  // 0 = surface, 1 = fully submerged
+  diveProgress: number
   actionCooldown: number
 }
 
-/**
- * Create initial physics state
- */
 export function createPhysicsState(): PhysicsState {
   return {
     velocityY: 0,
@@ -31,9 +26,6 @@ export function createPhysicsState(): PhysicsState {
   }
 }
 
-/**
- * Reset physics state (e.g., when starting a new race)
- */
 export function resetPhysicsState(state: PhysicsState): void {
   state.velocityY = 0
   state.isJumping = false
@@ -42,9 +34,6 @@ export function resetPhysicsState(state: PhysicsState): void {
   state.actionCooldown = 0
 }
 
-/**
- * Trigger a jump if conditions allow
- */
 export function triggerJump(state: PhysicsState): boolean {
   if (!state.isJumping && !state.isDiving && state.actionCooldown === 0) {
     state.isJumping = true
@@ -54,9 +43,6 @@ export function triggerJump(state: PhysicsState): boolean {
   return false
 }
 
-/**
- * Trigger a dive if conditions allow
- */
 export function triggerDive(state: PhysicsState): boolean {
   if (!state.isJumping && !state.isDiving) {
     state.isDiving = true
@@ -65,9 +51,6 @@ export function triggerDive(state: PhysicsState): boolean {
   return false
 }
 
-/**
- * Check audio input and trigger actions
- */
 export function checkAudioTriggers(
   state: PhysicsState,
   jumpLoudness: number,
@@ -82,27 +65,22 @@ export function checkAudioTriggers(
   }
 }
 
-/**
- * Update physics state for one frame
- * Returns the Y position offset from water level
- */
+// Returns boat Y position
 export function updatePhysics(
   state: PhysicsState,
   dt: number,
   waterLevel: number,
   isDiveHeld: boolean
 ): number {
-  // Decrement cooldown timer
   if (state.actionCooldown > 0) {
     state.actionCooldown = Math.max(0, state.actionCooldown - dt)
   }
 
-  // Apply jump physics
+  // Jump
   if (state.isJumping) {
     state.velocityY -= GRAVITY * dt
     const newY = waterLevel + state.velocityY * dt
 
-    // Land when hitting water
     if (newY <= waterLevel) {
       state.velocityY = 0
       state.isJumping = false
@@ -113,13 +91,11 @@ export function updatePhysics(
     return newY
   }
 
-  // Apply dive physics
+  // Dive
   if (state.isDiving) {
     if (isDiveHeld) {
-      // Dive down toward target depth
       state.diveProgress = Math.min(1, state.diveProgress + DIVE_SPEED * dt)
     } else {
-      // Rise back up
       state.diveProgress = Math.max(0, state.diveProgress - DIVE_SPEED * dt)
       if (state.diveProgress === 0) {
         state.isDiving = false
@@ -129,6 +105,5 @@ export function updatePhysics(
     return waterLevel + (DIVE_DEPTH * state.diveProgress)
   }
 
-  // Float on water
   return waterLevel
 }

@@ -47,21 +47,11 @@ export interface Obstacle {
   worldX: number
 }
 
-// =============================================================================
-// Spiral Model Configuration
-// =============================================================================
+// Spiral model
 
-// Adjust this to change the spiral size (default 0.15)
 const SPIRAL_SCALE = 0.35
-
-// Cached spiral model - set once after loading, cloned for each obstacle
 let cachedSpiralModel: THREE.Group | null = null
 
-/**
- * Set the spiral model after loading. Call once at scene setup.
- * Only applies scale and shadows - flat orientation is applied per-clone
- * to avoid being overwritten by wave rocking.
- */
 export function setSpiralModel(model: THREE.Group): void {
   model.scale.set(SPIRAL_SCALE, SPIRAL_SCALE, SPIRAL_SCALE)
   model.traverse((child) => {
@@ -73,15 +63,11 @@ export function setSpiralModel(model: THREE.Group): void {
   cachedSpiralModel = model
 }
 
-/**
- * Clone the cached spiral model with nested group structure.
- * Outer group receives wave rocking, inner model stays flat.
- */
 function cloneSpiralModel(): THREE.Group {
   const outerGroup = new THREE.Group()
 
   if (!cachedSpiralModel) {
-    // Fallback: simple torus if model not loaded yet
+    // Fallback geometry
     const geometry = new THREE.TorusGeometry(0.2, 0.06, 8, 16)
     const material = new THREE.MeshStandardMaterial({ color: 0x1a1a1a })
     const mesh = new THREE.Mesh(geometry, material)
@@ -92,26 +78,17 @@ function cloneSpiralModel(): THREE.Group {
   }
 
   const innerModel = cachedSpiralModel.clone()
-  innerModel.rotation.x = -Math.PI / 2  // Flat orientation (preserved from wave rocking)
+  innerModel.rotation.x = -Math.PI / 2
   outerGroup.add(innerModel)
 
   return outerGroup
 }
 
-// =============================================================================
-// Toothbrush Model Configuration
-// =============================================================================
+// Toothbrush model
 
-// Adjust this to change the toothbrush size
 const TOOTHBRUSH_SCALE = 0.20
-
-// Cached toothbrush model - set once after loading, cloned for each obstacle
 let cachedToothbrushModel: THREE.Group | null = null
 
-/**
- * Set the toothbrush model after loading. Call once at scene setup.
- * Applies scale and shadows - orientation is applied per-clone.
- */
 export function setToothbrushModel(model: THREE.Group): void {
   model.scale.set(TOOTHBRUSH_SCALE, TOOTHBRUSH_SCALE, TOOTHBRUSH_SCALE)
   model.traverse((child) => {
@@ -123,46 +100,33 @@ export function setToothbrushModel(model: THREE.Group): void {
   cachedToothbrushModel = model
 }
 
-/**
- * Clone the cached toothbrush model.
- * Oriented horizontally, bristles forward like it's flying at the player.
- */
 function cloneToothbrushModel(): THREE.Group {
   const outerGroup = new THREE.Group()
 
   if (!cachedToothbrushModel) {
-    // Fallback: simple capsule if model not loaded yet
+    // Fallback geometry
     const geometry = new THREE.CapsuleGeometry(0.05, 0.4, 4, 8)
     const material = new THREE.MeshStandardMaterial({ color: 0x4488ff })
     const mesh = new THREE.Mesh(geometry, material)
-    mesh.rotation.z = Math.PI / 2  // Horizontal orientation
+    mesh.rotation.z = Math.PI / 2
     mesh.castShadow = true
     outerGroup.add(mesh)
     return outerGroup
   }
 
   const innerModel = cachedToothbrushModel.clone()
-  innerModel.rotation.x = Math.PI  // Bristles facing down toward water
-  innerModel.rotation.y = 3 * Math.PI / 2  // Handle pointing left, bristles right
+  innerModel.rotation.x = Math.PI
+  innerModel.rotation.y = 3 * Math.PI / 2
   outerGroup.add(innerModel)
 
   return outerGroup
 }
 
-// =============================================================================
-// Molar Model Configuration
-// =============================================================================
+// Molar model
 
-// Adjust this to change the molar size
 const MOLAR_SCALE = 0.5
-
-// Cached molar model - set once after loading, cloned for each obstacle
 let cachedMolarModel: THREE.Group | null = null
 
-/**
- * Set the molar model after loading. Call once at scene setup.
- * Applies scale and shadows - orientation is applied per-clone.
- */
 export function setMolarModel(model: THREE.Group): void {
   model.scale.set(MOLAR_SCALE, MOLAR_SCALE, MOLAR_SCALE)
   model.traverse((child) => {
@@ -174,15 +138,11 @@ export function setMolarModel(model: THREE.Group): void {
   cachedMolarModel = model
 }
 
-/**
- * Clone the cached molar model with nested group structure.
- * Outer group receives wave rocking, inner model maintains upright orientation.
- */
 function cloneMolarModel(): THREE.Group {
   const outerGroup = new THREE.Group()
 
   if (!cachedMolarModel) {
-    // Fallback: simple sphere if model not loaded yet
+    // Fallback geometry
     const geometry = new THREE.SphereGeometry(0.2, 8, 6)
     const material = new THREE.MeshStandardMaterial({ color: 0xf5f5dc })
     const mesh = new THREE.Mesh(geometry, material)
@@ -192,7 +152,7 @@ function cloneMolarModel(): THREE.Group {
   }
 
   const innerModel = cachedMolarModel.clone()
-  innerModel.rotation.y = -Math.PI / 6  // Slight rotation for visual interest
+  innerModel.rotation.y = -Math.PI / 6
   outerGroup.add(innerModel)
 
   return outerGroup
@@ -264,16 +224,13 @@ export function getDiveObstacleTypes(): ObstacleType[] {
   return ['TOOTHBRUSH']
 }
 
-// Forgiving hitbox shrink factor (0.6 = 40% smaller than visual)
+// Collision detection
+
 const HITBOX_SHRINK = 0.6
+const BOAT_SAIL_HEIGHT = 0.8
+const BOAT_SAIL_OFFSET = 0.3
 
-// Boat sail extends upward from boat position
-const BOAT_SAIL_HEIGHT = 0.8  // How far the sail extends above boat.position.y
-const BOAT_SAIL_OFFSET = 0.3  // Vertical offset to center hitbox on sail
-
-/**
- * Check collision between boat and obstacle using forgiving AABB
- */
+// AABB collision between boat and obstacle
 export function checkCollision(
   boatX: number,
   boatY: number,
@@ -283,16 +240,16 @@ export function checkCollision(
 ): boolean {
   const { mesh, config } = obstacle
 
-  // Boat hitbox (offset upward to cover sail)
+  // Boat hitbox
   const bHalfW = (boatWidth * HITBOX_SHRINK) / 2
   const bHalfH = ((boatHeight + BOAT_SAIL_HEIGHT) * HITBOX_SHRINK) / 2
-  const boatCenterY = boatY + BOAT_SAIL_OFFSET  // Offset hitbox upward
+  const boatCenterY = boatY + BOAT_SAIL_OFFSET
   const bLeft = boatX - bHalfW
   const bRight = boatX + bHalfW
   const bBottom = boatCenterY - bHalfH
   const bTop = boatCenterY + bHalfH
 
-  // Obstacle hitbox (mesh.position is center)
+  // Obstacle hitbox
   const oHalfW = (config.width * HITBOX_SHRINK) / 2
   const oHalfH = (config.height * HITBOX_SHRINK) / 2
   const oLeft = mesh.position.x - oHalfW
@@ -300,14 +257,10 @@ export function checkCollision(
   const oBottom = mesh.position.y - oHalfH
   const oTop = mesh.position.y + oHalfH
 
-  // AABB collision check
   return bLeft < oRight && bRight > oLeft && bBottom < oTop && bTop > oBottom
 }
 
-/**
- * Dispose of obstacle mesh resources to prevent memory leaks.
- * Call this before removing an obstacle from the scene.
- */
+// Dispose mesh resources to prevent memory leaks
 export function disposeObstacle(obstacle: Obstacle): void {
   obstacle.mesh.traverse((child) => {
     if (child instanceof THREE.Mesh) {

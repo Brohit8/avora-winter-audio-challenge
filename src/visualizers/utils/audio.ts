@@ -1,9 +1,8 @@
 import { NOISE_THRESHOLD, MAX_AUDIO_VALUE, HZ_PER_BIN } from '../constants'
 
-/**
- * Calculate average amplitude in a frequency range, normalized 0-1.
- * Applies noise threshold to filter ambient sound.
- */
+// Audio analysis utilities
+
+// Average amplitude in frequency range, normalized 0-1
 export function getFrequencyAverage(
   data: Uint8Array,
   startBin: number,
@@ -19,9 +18,6 @@ export function getFrequencyAverage(
   return sum / (endBin - startBin) / (MAX_AUDIO_VALUE - NOISE_THRESHOLD)
 }
 
-/**
- * Convert Hz to standard audio production frequency band name.
- */
 export function getFrequencyBandLabel(hz: number): string {
   if (hz < 60) return 'Sub-Bass'
   if (hz < 250) return 'Bass'
@@ -31,9 +27,6 @@ export function getFrequencyBandLabel(hz: number): string {
   return 'Presence'
 }
 
-/**
- * Convert FFT bin index to Hz.
- */
 export function binToHz(bin: number): number {
   return Math.round(bin * HZ_PER_BIN)
 }
