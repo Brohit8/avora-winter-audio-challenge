@@ -62,6 +62,11 @@ import { createClouds, updateClouds, type CloudSystem } from './three/clouds'
 const DEFAULT_CAMERA_POS = new THREE.Vector3(0, 3, 6)
 const DEFAULT_CAMERA_TARGET = new THREE.Vector3(0, 0, 0)
 
+// Reusable Vector3 objects for animation loop (avoids garbage collection)
+const _targetPos = new THREE.Vector3()
+const _targetLookAt = new THREE.Vector3()
+const _currentLookAt = new THREE.Vector3()
+
 // Ease-out cubic for smooth deceleration
 function easeOutCubic(t: number): number {
   return 1 - Math.pow(1 - t, 3)
@@ -623,29 +628,29 @@ export function Visualizer({
         const easedProgress = easeOutCubic(progress)
 
         // Target camera position: close to boat, slightly elevated, from the side
-        const targetPos = new THREE.Vector3(
+        _targetPos.set(
           boat.position.x + 1.5,  // Slightly ahead of boat
           boat.position.y + 0.8,  // Above boat level
           boat.position.z + 2.5   // From the side
         )
 
         // Look at the boat
-        const targetLookAt = new THREE.Vector3(
+        _targetLookAt.set(
           boat.position.x,
           boat.position.y + 0.2,
           boat.position.z
         )
 
         // Lerp camera position
-        camera.position.lerpVectors(DEFAULT_CAMERA_POS, targetPos, easedProgress)
+        camera.position.lerpVectors(DEFAULT_CAMERA_POS, _targetPos, easedProgress)
 
         // Lerp lookAt target
-        const currentLookAt = new THREE.Vector3().lerpVectors(
+        _currentLookAt.lerpVectors(
           DEFAULT_CAMERA_TARGET,
-          targetLookAt,
+          _targetLookAt,
           easedProgress
         )
-        camera.lookAt(currentLookAt)
+        camera.lookAt(_currentLookAt)
 
         // Transition to game over screen after animation completes
         if (progress >= 1) {
