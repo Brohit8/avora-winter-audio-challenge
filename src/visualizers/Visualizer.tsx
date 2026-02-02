@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from 'react'
 import * as THREE from 'three'
-import type { VisualizerProps, Screen } from './types'
+import type { VisualizerProps } from './types'
 import {
   COLORS,
   MAX_SLIDER_BIN,
@@ -10,8 +10,6 @@ import {
   GUTTER_PHASE,
   WORLD_SCROLL_SPEED,
   ACTION_THRESHOLD,
-  SCORE_COEFFICIENT,
-  HIGH_SCORE_KEY,
 } from './constants'
 import {
   createPhysicsState,
@@ -21,11 +19,11 @@ import {
   type PhysicsState,
 } from './game/physics'
 import { useKeyboardControls } from './hooks/useKeyboardControls'
+import { useGameState } from './hooks/useGameState'
 import { getFrequencyAverage } from './utils/audio'
 import { SetupOverlay } from './components/SetupOverlay'
 import { ScoreDisplay } from './components/ScoreDisplay'
 import { GameOverOverlay } from './components/GameOverOverlay'
-import { DEFAULT_DIVISION_BIN } from './components/FrequencyDivisionSlider'
 import { CountdownOverlay } from './components/CountdownOverlay'
 import { createWindSwirlSprites, updateWindSwirls, disposeWindSwirls } from './three/windSwirls'
 import { createSandTerrain } from './three/sandTerrain'
@@ -70,14 +68,19 @@ export function Visualizer({
   const [size, setSize] = useState({ width: window.innerWidth, height: window.innerHeight })
 
   // Game state
-  const [screen, setScreen] = useState<Screen>('setup')
-  const [divisionBin, setDivisionBin] = useState<number>(DEFAULT_DIVISION_BIN)
-  const [score, setScore] = useState<number>(0)
-  const [highScore, setHighScore] = useState<number>(() => {
-    const saved = localStorage.getItem(HIGH_SCORE_KEY)
-    return saved ? parseInt(saved, 10) : 0
-  })
-  const [isNewHighScore, setIsNewHighScore] = useState<boolean>(false)
+  const {
+    screen,
+    divisionBin,
+    score,
+    highScore,
+    isNewHighScore,
+    setDivisionBin,
+    startCountdown,
+    startRace,
+    triggerGameOver,
+    showGameOver,
+    updateScore,
+  } = useGameState()
 
   // Three.js object refs (shared between effects)
   const sceneRef = useRef<THREE.Scene | null>(null)
@@ -114,27 +117,13 @@ export function Visualizer({
     isDownKeyHeldRef.current = false
     // Clear obstacles
     obstacleManagerRef.current?.reset()
-    setScore(0)
-    setScreen('countdown')
-  }, [])
-
-  const handleCountdownComplete = useCallback(() => {
-    setScreen('race')
-  }, [])
+    startCountdown()
+  }, [startCountdown])
 
   const handleGameOver = useCallback(() => {
-    // Check for new high score
-    const currentScore = Math.floor(worldOffsetRef.current * SCORE_COEFFICIENT)
-    if (currentScore > highScore) {
-      setHighScore(currentScore)
-      setIsNewHighScore(true)
-      localStorage.setItem(HIGH_SCORE_KEY, currentScore.toString())
-    } else {
-      setIsNewHighScore(false)
-    }
+    triggerGameOver(worldOffsetRef.current)
     animationStartTimeRef.current = performance.now()
-    setScreen('gameOverAnimation')
-  }, [highScore])
+  }, [triggerGameOver])
 
   // Scene setup (runs once on mount)
   useEffect(() => {
@@ -342,7 +331,7 @@ export function Visualizer({
         lastFrameTimeRef.current = currentTime
 
         worldOffsetRef.current += WORLD_SCROLL_SPEED * deltaTime
-        setScore(Math.floor(worldOffsetRef.current * SCORE_COEFFICIENT))
+        updateScore(worldOffsetRef.current)
 
         // Obstacles
         const worldOffset = worldOffsetRef.current
@@ -385,7 +374,7 @@ export function Visualizer({
           DEFAULT_CAMERA_TARGET
         )
         if (result.isComplete) {
-          setScreen('gameOver')
+          showGameOver()
         }
       }
 
@@ -424,7 +413,7 @@ export function Visualizer({
       )}
 
       {screen === 'countdown' && (
-        <CountdownOverlay onComplete={handleCountdownComplete} />
+        <CountdownOverlay onComplete={startRace} />
       )}
 
       {screen === 'gameOver' && (
