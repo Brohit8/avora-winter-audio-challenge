@@ -303,3 +303,20 @@ export function checkCollision(
   // AABB collision check
   return bLeft < oRight && bRight > oLeft && bBottom < oTop && bTop > oBottom
 }
+
+/**
+ * Dispose of obstacle mesh resources to prevent memory leaks.
+ * Call this before removing an obstacle from the scene.
+ */
+export function disposeObstacle(obstacle: Obstacle): void {
+  obstacle.mesh.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      child.geometry?.dispose()
+      if (Array.isArray(child.material)) {
+        child.material.forEach(m => m.dispose())
+      } else if (child.material) {
+        child.material.dispose()
+      }
+    }
+  })
+}

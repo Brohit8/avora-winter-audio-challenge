@@ -46,6 +46,7 @@ import {
   getJumpObstacleTypes,
   getDiveObstacleTypes,
   checkCollision,
+  disposeObstacle,
   setSpiralModel,
   setMolarModel,
   setToothbrushModel,
@@ -172,7 +173,10 @@ export function Visualizer({
     // Clear obstacles
     const scene = sceneRef.current
     if (scene) {
-      obstaclesRef.current.forEach(obs => scene.remove(obs.mesh))
+      obstaclesRef.current.forEach(obs => {
+        scene.remove(obs.mesh)
+        disposeObstacle(obs)
+      })
     }
     obstaclesRef.current = []
     lastObstacleWorldXRef.current = 0
@@ -589,7 +593,10 @@ export function Visualizer({
 
         // Remove off-screen obstacles
         const toRemove = obstaclesRef.current.filter(obs => isObstacleOffScreen(obs, worldOffset))
-        toRemove.forEach(obs => scene!.remove(obs.mesh))
+        toRemove.forEach(obs => {
+          scene!.remove(obs.mesh)
+          disposeObstacle(obs)
+        })
         obstaclesRef.current = obstaclesRef.current.filter(obs => !isObstacleOffScreen(obs, worldOffset))
 
         // Update wind swirls (positioned relative to boat)
