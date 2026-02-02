@@ -16,12 +16,11 @@ import {
 import {
   createPhysicsState,
   resetPhysicsState,
-  triggerJump,
-  triggerDive,
   checkAudioTriggers,
   updatePhysics,
   type PhysicsState,
 } from './game/physics'
+import { useKeyboardControls } from './hooks/useKeyboardControls'
 import { getFrequencyAverage } from './utils/audio'
 import { SetupOverlay } from './components/SetupOverlay'
 import { ScoreDisplay } from './components/ScoreDisplay'
@@ -92,40 +91,12 @@ export function Visualizer({
   const worldOffsetRef = useRef<number>(0)
   const lastFrameTimeRef = useRef<number>(0)
   const physicsStateRef = useRef<PhysicsState>(createPhysicsState())
-  const isDownKeyHeldRef = useRef<boolean>(false)  // Track if down arrow is held
   const obstacleManagerRef = useRef<ObstacleManager | null>(null)
   const animationStartTimeRef = useRef<number>(0)
   const cloudSystemRef = useRef<CloudSystem | null>(null)
 
-  // Keyboard controls for jump (spacebar) and dive (down arrow)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (screen !== 'race') return
-
-      if (e.code === 'Space' && !e.repeat) {
-        triggerJump(physicsStateRef.current)
-        e.preventDefault()
-      } else if (e.code === 'ArrowDown') {
-        triggerDive(physicsStateRef.current)
-        isDownKeyHeldRef.current = true
-        e.preventDefault()
-      }
-    }
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === 'ArrowDown') {
-        isDownKeyHeldRef.current = false
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    window.addEventListener('keyup', handleKeyUp)
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-      window.removeEventListener('keyup', handleKeyUp)
-    }
-  }, [screen])
+  // Keyboard controls
+  const { isDownKeyHeldRef } = useKeyboardControls(screen, physicsStateRef)
 
   // Game actions
   const handleStartRace = useCallback(() => {
