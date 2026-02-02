@@ -1,7 +1,7 @@
 import type { RefObject } from 'react'
 
 // Game state
-export type Screen = 'setup' | 'countdown' | 'race' | 'gameOver_animation' | 'gameOver'
+export type Screen = 'setup' | 'countdown' | 'race' | 'gameOverAnimation' | 'gameOver'
 
 // Props passed from useAudio hook
 export interface VisualizerProps {

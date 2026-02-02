@@ -162,7 +162,7 @@ export function Visualizer({
       setIsNewHighScore(false)
     }
     animationStartTimeRef.current = performance.now()
-    setScreen('gameOver_animation')
+    setScreen('gameOverAnimation')
   }, [highScore])
 
   // Scene setup (runs once on mount)
@@ -405,7 +405,7 @@ export function Visualizer({
       }
 
       // Game over camera animation
-      if (screen === 'gameOver_animation' && boat && camera) {
+      if (screen === 'gameOverAnimation' && boat && camera) {
         const result = updateGameOverCamera(
           camera,
           boat,
