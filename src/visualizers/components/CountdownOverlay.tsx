@@ -48,7 +48,7 @@ export function CountdownOverlay({ onComplete }: CountdownOverlayProps) {
   }, [stepIndex, onComplete])
 
   return (
-    <div style={overlayStyle}>
+    <div style={overlayStyle} role="alert" aria-live="assertive">
       <span style={countdownTextStyle}>
         {COUNTDOWN_STEPS[stepIndex]}
       </span>

@@ -86,7 +86,10 @@ function createSwirlTexture(variation: number): THREE.CanvasTexture {
   const canvas = document.createElement('canvas')
   canvas.width = TEXTURE_SIZE
   canvas.height = TEXTURE_SIZE
-  const ctx = canvas.getContext('2d')!
+  const ctx = canvas.getContext('2d')
+  if (!ctx) {
+    throw new Error('Failed to get 2D canvas context for wind swirl texture')
+  }
 
   ctx.clearRect(0, 0, TEXTURE_SIZE, TEXTURE_SIZE)
   const defs = WIND_SWIRL_DEFS[variation % WIND_SWIRL_DEFS.length]
