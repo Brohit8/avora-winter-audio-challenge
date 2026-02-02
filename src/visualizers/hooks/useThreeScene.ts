@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react'
 import * as THREE from 'three'
-import { COLORS, BOAT_X, BOAT_BASE_Y, GUTTER_Z, GUTTER_PHASE } from '../constants'
+import { COLORS, BOAT_X, BOAT_BASE_Y, GUTTER_Z, GUTTER_PHASE, BOAT_HITBOX_WIDTH, BOAT_HITBOX_HEIGHT } from '../constants'
 import { createSandTerrain } from '../three/sandTerrain'
 import { createGutter } from '../three/gutter'
 import { createClouds, type CloudSystem } from '../three/clouds'
@@ -8,6 +8,7 @@ import { createWindSwirlSprites, disposeWindSwirls } from '../three/windSwirls'
 import { enableShadows, applySailMaterial } from '../three/models'
 import { loadAllAssets } from '../three/AssetLoader'
 import { ObstacleManager } from '../game/ObstacleManager'
+import { DEBUG_HITBOXES, createBoatDebugHitbox } from '../three/obstacles'
 
 // Camera defaults
 const DEFAULT_CAMERA_POS = new THREE.Vector3(0, 3, 6)
@@ -30,6 +31,7 @@ export function useThreeScene(containerRef: React.RefObject<HTMLDivElement | nul
   const cloudSystemRef = useRef<CloudSystem | null>(null)
   const obstacleManagerRef = useRef<ObstacleManager | null>(null)
   const waveTimeOriginRef = useRef<number>(0)
+  const boatDebugHitboxRef = useRef<THREE.LineSegments | null>(null)
 
   useEffect(() => {
     const container = containerRef.current
@@ -113,6 +115,13 @@ export function useThreeScene(containerRef: React.RefObject<HTMLDivElement | nul
         boat.rotation.y = Math.PI / 2
         scene.add(boat)
         boatRef.current = boat
+
+        // Debug hitbox for boat
+        if (DEBUG_HITBOXES) {
+          const debugHitbox = createBoatDebugHitbox(BOAT_HITBOX_WIDTH, BOAT_HITBOX_HEIGHT)
+          scene.add(debugHitbox)
+          boatDebugHitboxRef.current = debugHitbox
+        }
       })
       .catch((error) => {
         console.error('Error loading models:', error)
@@ -143,6 +152,11 @@ export function useThreeScene(containerRef: React.RefObject<HTMLDivElement | nul
       sailMaterial.dispose()
 
       if (boatRef.current) scene.remove(boatRef.current)
+      if (boatDebugHitboxRef.current) {
+        scene.remove(boatDebugHitboxRef.current)
+        boatDebugHitboxRef.current.geometry.dispose()
+        ;(boatDebugHitboxRef.current.material as THREE.Material).dispose()
+      }
 
       windSwirlsRef.current.forEach(sprite => scene.remove(sprite))
       disposeWindSwirls(windSwirlsRef.current)
@@ -183,6 +197,9 @@ export function useThreeScene(containerRef: React.RefObject<HTMLDivElement | nul
 
     // Game objects
     obstacleManagerRef,
+
+    // Debug
+    boatDebugHitboxRef,
 
     // Timing
     waveTimeOriginRef,

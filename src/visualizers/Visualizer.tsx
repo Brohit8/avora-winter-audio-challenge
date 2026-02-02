@@ -28,6 +28,7 @@ import { updateWindSwirls } from './three/windSwirls'
 import { getGerstnerDisplacement, getGerstnerNormal } from './three/gerstnerWaves'
 import { updateClouds } from './three/clouds'
 import { updateGameOverCamera, resetCamera } from './game/cameraAnimation'
+import { DEBUG_HITBOXES, updateBoatDebugHitbox } from './three/obstacles'
 
 /**
  * Visualizer - Three.js boat racing game with audio controls
@@ -80,6 +81,7 @@ export function Visualizer({
     windSwirlsRef,
     cloudSystemRef,
     obstacleManagerRef,
+    boatDebugHitboxRef,
     waveTimeOriginRef,
   } = useThreeScene(containerRef)
 
@@ -170,6 +172,11 @@ export function Visualizer({
         // Rotation from wave normal
         boat.rotation.z = Math.asin(-normal.nx) * 0.6
         boat.rotation.x = Math.asin(normal.nz) * 0.5
+
+        // Update boat debug hitbox position
+        if (DEBUG_HITBOXES && boatDebugHitboxRef.current) {
+          updateBoatDebugHitbox(boat.position.x, boat.position.y, boat.position.z, false)
+        }
       }
 
       // Race logic

@@ -12,32 +12,39 @@ interface ObstacleConfig {
   color: number
   baseY: number
   floatsOnWater: boolean
+  hitboxOffsetX: number  // Shift hitbox toward front (negative = toward boat)
 }
+
+// Debug visualization toggle - set to true to see hitboxes
+export const DEBUG_HITBOXES = false
 
 const OBSTACLE_CONFIGS: Record<ObstacleType, ObstacleConfig> = {
   SPIRAL: {
     width: 0.5,
     height: 0.3,
     depth: 0.5,
-    color: 0x1a1a1a,  // Dark color for spiral
-    baseY: 0.55,  // Floats higher on water surface
+    color: 0x1a1a1a,
+    baseY: 0.55,
     floatsOnWater: true,
+    hitboxOffsetX: 0,  // Centered - symmetric shape
   },
   MOLAR: {
     width: 0.5,
     height: 0.5,
     depth: 0.5,
-    color: 0xf5f5dc,  // Off-white tooth color (fallback)
-    baseY: 0.50,  // Slightly submerged in water
+    color: 0xf5f5dc,
+    baseY: 0.50,
     floatsOnWater: true,
+    hitboxOffsetX: 0,  // Centered - symmetric shape
   },
   TOOTHBRUSH: {
-    width: 0.8,
+    width: 1.0,  // Narrower hitbox (brush head only)
     height: 0.3,
     depth: 0.3,
-    color: 0x4488ff,  // Blue color for toothbrush (fallback)
-    baseY: 1.0,  // Flies above boat level
+    color: 0x4488ff,
+    baseY: 1.0,
     floatsOnWater: false,
+    hitboxOffsetX: 0.7,  // Shift toward front (bristle end hitting boat)
   },
 }
 
@@ -46,6 +53,7 @@ export interface Obstacle {
   type: ObstacleType
   config: ObstacleConfig
   worldX: number
+  debugHitbox?: THREE.LineSegments  // Debug wireframe for hitbox visualization
 }
 
 // Spiral model
@@ -160,12 +168,18 @@ export function createObstacle(type: ObstacleType, worldX: number): Obstacle {
   const mesh = createObstacleMesh(type)
   const config = OBSTACLE_CONFIGS[type]
 
-  return {
+  const obstacle: Obstacle = {
     mesh,
     type,
     config,
     worldX,
   }
+
+  if (DEBUG_HITBOXES) {
+    obstacle.debugHitbox = createDebugHitbox(config)
+  }
+
+  return obstacle
 }
 
 // Update obstacle position, syncing with wave motion if it floats
@@ -193,6 +207,11 @@ export function updateObstacle(
     mesh.position.y = config.baseY
     mesh.rotation.set(0, 0, 0)
   }
+
+  // Update debug hitbox position
+  if (DEBUG_HITBOXES) {
+    updateDebugHitbox(obstacle)
+  }
 }
 
 export function isObstacleOffScreen(obstacle: Obstacle, worldOffset: number): boolean {
@@ -212,7 +231,8 @@ export function getDiveObstacleTypes(): ObstacleType[] {
 
 const HITBOX_SHRINK = 0.6
 const BOAT_SAIL_HEIGHT = 0.8
-const BOAT_SAIL_OFFSET = 0.3
+const BOAT_SAIL_OFFSET_Y = 0.3
+const BOAT_SAIL_OFFSET_X = 0  // Shift boat hitbox toward sail (positive = toward oncoming obstacles)
 
 // AABB collision between boat and obstacle
 export function checkCollision(
@@ -224,24 +244,82 @@ export function checkCollision(
 ): boolean {
   const { mesh, config } = obstacle
 
-  // Boat hitbox
+  // Boat hitbox - use sail offset for flying obstacles (they hit the mast/sail)
+  const boatOffsetX = config.floatsOnWater ? 0 : BOAT_SAIL_OFFSET_X
   const bHalfW = (boatWidth * HITBOX_SHRINK) / 2
   const bHalfH = ((boatHeight + BOAT_SAIL_HEIGHT) * HITBOX_SHRINK) / 2
-  const boatCenterY = boatY + BOAT_SAIL_OFFSET
-  const bLeft = boatX - bHalfW
-  const bRight = boatX + bHalfW
+  const boatCenterX = boatX + boatOffsetX
+  const boatCenterY = boatY + BOAT_SAIL_OFFSET_Y
+  const bLeft = boatCenterX - bHalfW
+  const bRight = boatCenterX + bHalfW
   const bBottom = boatCenterY - bHalfH
   const bTop = boatCenterY + bHalfH
 
-  // Obstacle hitbox
+  // Obstacle hitbox - apply hitboxOffsetX
   const oHalfW = (config.width * HITBOX_SHRINK) / 2
   const oHalfH = (config.height * HITBOX_SHRINK) / 2
-  const oLeft = mesh.position.x - oHalfW
-  const oRight = mesh.position.x + oHalfW
+  const obstacleCenterX = mesh.position.x + config.hitboxOffsetX
+  const oLeft = obstacleCenterX - oHalfW
+  const oRight = obstacleCenterX + oHalfW
   const oBottom = mesh.position.y - oHalfH
   const oTop = mesh.position.y + oHalfH
 
   return bLeft < oRight && bRight > oLeft && bBottom < oTop && bTop > oBottom
+}
+
+// Debug hitbox visualization
+
+export function createDebugHitbox(config: ObstacleConfig): THREE.LineSegments {
+  const width = config.width * HITBOX_SHRINK
+  const height = config.height * HITBOX_SHRINK
+  const geometry = new THREE.BoxGeometry(width, height, 0.1)
+  const edges = new THREE.EdgesGeometry(geometry)
+  const material = new THREE.LineBasicMaterial({
+    color: config.floatsOnWater ? 0x00ff00 : 0xff0000,  // Green for jump, red for dive
+    linewidth: 2,
+  })
+  const wireframe = new THREE.LineSegments(edges, material)
+  geometry.dispose()
+  return wireframe
+}
+
+export function updateDebugHitbox(obstacle: Obstacle): void {
+  if (!obstacle.debugHitbox) return
+  const { mesh, config } = obstacle
+  obstacle.debugHitbox.position.x = mesh.position.x + config.hitboxOffsetX
+  obstacle.debugHitbox.position.y = mesh.position.y
+  obstacle.debugHitbox.position.z = mesh.position.z + 0.1  // Slightly in front
+}
+
+// Boat debug hitbox helper
+let boatDebugHitbox: THREE.LineSegments | null = null
+
+export function createBoatDebugHitbox(boatWidth: number, boatHeight: number): THREE.LineSegments {
+  const width = boatWidth * HITBOX_SHRINK
+  const height = (boatHeight + BOAT_SAIL_HEIGHT) * HITBOX_SHRINK
+  const geometry = new THREE.BoxGeometry(width, height, 0.1)
+  const edges = new THREE.EdgesGeometry(geometry)
+  const material = new THREE.LineBasicMaterial({ color: 0x0088ff, linewidth: 2 })
+  boatDebugHitbox = new THREE.LineSegments(edges, material)
+  geometry.dispose()
+  return boatDebugHitbox
+}
+
+export function updateBoatDebugHitbox(
+  boatX: number,
+  boatY: number,
+  boatZ: number,
+  forFlying: boolean
+): void {
+  if (!boatDebugHitbox) return
+  const offsetX = forFlying ? BOAT_SAIL_OFFSET_X : 0
+  boatDebugHitbox.position.x = boatX + offsetX
+  boatDebugHitbox.position.y = boatY + BOAT_SAIL_OFFSET_Y
+  boatDebugHitbox.position.z = boatZ + 0.1
+}
+
+export function getBoatDebugHitbox(): THREE.LineSegments | null {
+  return boatDebugHitbox
 }
 
 // Dispose mesh resources to prevent memory leaks
@@ -256,4 +334,10 @@ export function disposeObstacle(obstacle: Obstacle): void {
       }
     }
   })
+
+  // Clean up debug hitbox
+  if (obstacle.debugHitbox) {
+    obstacle.debugHitbox.geometry.dispose()
+      ; (obstacle.debugHitbox.material as THREE.Material).dispose()
+  }
 }

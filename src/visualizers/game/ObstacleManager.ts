@@ -19,6 +19,7 @@ import {
   getDiveObstacleTypes,
   checkCollision,
   disposeObstacle,
+  DEBUG_HITBOXES,
   type Obstacle,
   type ObstacleType,
 } from '../three/obstacles'
@@ -37,6 +38,9 @@ export class ObstacleManager {
   reset(): void {
     this.obstacles.forEach(obs => {
       this.scene.remove(obs.mesh)
+      if (DEBUG_HITBOXES && obs.debugHitbox) {
+        this.scene.remove(obs.debugHitbox)
+      }
       disposeObstacle(obs)
     })
     this.obstacles = []
@@ -79,6 +83,9 @@ export class ObstacleManager {
     // Create and add obstacle
     const obstacle = createObstacle(selectedType, spawnThreshold)
     this.scene.add(obstacle.mesh)
+    if (DEBUG_HITBOXES && obstacle.debugHitbox) {
+      this.scene.add(obstacle.debugHitbox)
+    }
     this.obstacles.push(obstacle)
     this.lastObstacleWorldX = spawnThreshold
     this.obstacleHistory.push(selectedType)
@@ -110,6 +117,9 @@ export class ObstacleManager {
     const toRemove = this.obstacles.filter(obs => isObstacleOffScreen(obs, worldOffset))
     toRemove.forEach(obs => {
       this.scene.remove(obs.mesh)
+      if (DEBUG_HITBOXES && obs.debugHitbox) {
+        this.scene.remove(obs.debugHitbox)
+      }
       disposeObstacle(obs)
     })
     this.obstacles = this.obstacles.filter(obs => !isObstacleOffScreen(obs, worldOffset))
