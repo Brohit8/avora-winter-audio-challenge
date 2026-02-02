@@ -95,8 +95,8 @@ export function SetupOverlay({
       <h1 style={titleStyle}>Sonic Surf</h1>
 
       <p style={instructionsStyle}>
-        Control your boat with your voice!<br />
-        Sing low to dive, whistle high to jump.
+        Hum/Sing to duck. Whistle/Snap to jump.<br />
+        Avoid dental disasters!
       </p>
 
       <FrequencyDivisionSlider
