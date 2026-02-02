@@ -1,18 +1,12 @@
 import { useState, useEffect } from 'react'
+import { baseOverlayStyle } from './overlayStyles'
 
 interface CountdownOverlayProps {
   onComplete: () => void
 }
 
 const overlayStyle: React.CSSProperties = {
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  width: '100%',
-  height: '100%',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
+  ...baseOverlayStyle,
   backgroundColor: 'rgba(0, 0, 0, 0.5)',
   pointerEvents: 'none',
 }
