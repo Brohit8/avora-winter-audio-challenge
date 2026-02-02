@@ -10,12 +10,7 @@ import {
   GUTTER_PHASE,
   CAMERA_ANIMATION_DURATION,
   WORLD_SCROLL_SPEED,
-  JUMP_VELOCITY,
-  GRAVITY,
-  DIVE_DEPTH,
-  DIVE_SPEED,
   ACTION_THRESHOLD,
-  ACTION_COOLDOWN,
   SCORE_COEFFICIENT,
   HIGH_SCORE_KEY,
   OBSTACLE_SPAWN_DELAY,
@@ -26,6 +21,15 @@ import {
   BOAT_HITBOX_WIDTH,
   BOAT_HITBOX_HEIGHT,
 } from './constants'
+import {
+  createPhysicsState,
+  resetPhysicsState,
+  triggerJump,
+  triggerDive,
+  checkAudioTriggers,
+  updatePhysics,
+  type PhysicsState,
+} from './physics'
 import { getFrequencyAverage } from './utils/audio'
 import { SetupOverlay } from './components/SetupOverlay'
 import { ScoreDisplay } from './components/ScoreDisplay'
@@ -105,11 +109,7 @@ export function Visualizer({
   const waveTimeOriginRef = useRef<number>(0)
   const worldOffsetRef = useRef<number>(0)
   const lastFrameTimeRef = useRef<number>(0)
-  const boatVelocityYRef = useRef<number>(0)
-  const isJumpingRef = useRef<boolean>(false)
-  const isDivingRef = useRef<boolean>(false)
-  const diveProgressRef = useRef<number>(0)  // 0 = surface, 1 = fully submerged
-  const actionCooldownRef = useRef<number>(0)  // Time remaining before next action allowed
+  const physicsStateRef = useRef<PhysicsState>(createPhysicsState())
   const isDownKeyHeldRef = useRef<boolean>(false)  // Track if down arrow is held
   const obstaclesRef = useRef<Obstacle[]>([])
   const lastObstacleWorldXRef = useRef<number>(0)
@@ -123,17 +123,10 @@ export function Visualizer({
       if (screen !== 'race') return
 
       if (e.code === 'Space' && !e.repeat) {
-        // Spacebar = Jump (only if not already jumping and cooldown finished)
-        if (!isJumpingRef.current && !isDivingRef.current && actionCooldownRef.current === 0) {
-          isJumpingRef.current = true
-          boatVelocityYRef.current = JUMP_VELOCITY
-        }
+        triggerJump(physicsStateRef.current)
         e.preventDefault()
       } else if (e.code === 'ArrowDown') {
-        // Down arrow = Dive (hold to stay down)
-        if (!isJumpingRef.current && !isDivingRef.current) {
-          isDivingRef.current = true
-        }
+        triggerDive(physicsStateRef.current)
         isDownKeyHeldRef.current = true
         e.preventDefault()
       }
@@ -165,12 +158,8 @@ export function Visualizer({
     if (boatRef.current) boatRef.current.position.x = BOAT_X
     worldOffsetRef.current = 0
     lastFrameTimeRef.current = 0
-    // Reset jump/dive state
-    boatVelocityYRef.current = 0
-    isJumpingRef.current = false
-    isDivingRef.current = false
-    diveProgressRef.current = 0
-    actionCooldownRef.current = 0
+    // Reset physics state
+    resetPhysicsState(physicsStateRef.current)
     isDownKeyHeldRef.current = false
     // Clear obstacles
     const scene = sceneRef.current
@@ -396,69 +385,23 @@ export function Visualizer({
         // Jump/Dive physics (only during race)
         if (screen === 'race') {
           const dt = 1 / 60  // Approximate frame time
+          const physics = physicsStateRef.current
 
-          // Decrement cooldown timer
-          if (actionCooldownRef.current > 0) {
-            actionCooldownRef.current = Math.max(0, actionCooldownRef.current - dt)
-          }
-
-          // Check for action triggers (divisionBin splits dive/jump frequency ranges)
-          if (frequencyData.current && !isJumpingRef.current && !isDivingRef.current) {
+          // Check for audio-triggered actions
+          if (frequencyData.current) {
             const diveLoudness = getFrequencyAverage(frequencyData.current, 0, divisionBin)
             const jumpLoudness = getFrequencyAverage(frequencyData.current, divisionBin, MAX_SLIDER_BIN)
-
-            // Jump requires cooldown to be finished (discrete action)
-            if (jumpLoudness > ACTION_THRESHOLD && actionCooldownRef.current === 0) {
-              // High frequency (whistling) = jump
-              isJumpingRef.current = true
-              boatVelocityYRef.current = JUMP_VELOCITY
-            }
-            // Dive has no cooldown (continuous hold action)
-            else if (diveLoudness > ACTION_THRESHOLD) {
-              // Low frequency (singing/humming) = dive
-              isDivingRef.current = true
-            }
+            checkAudioTriggers(physics, jumpLoudness, diveLoudness)
           }
 
-          // Apply jump physics when in air
-          if (isJumpingRef.current) {
-            boatVelocityYRef.current -= GRAVITY * dt
-            boat.position.y += boatVelocityYRef.current * dt
+          // Check if dive should be held (audio or keyboard)
+          const diveLoudness = frequencyData.current
+            ? getFrequencyAverage(frequencyData.current, 0, divisionBin)
+            : 0
+          const isDiveHeld = diveLoudness > ACTION_THRESHOLD || isDownKeyHeldRef.current
 
-            // Land when hitting water
-            if (boat.position.y <= waterLevel) {
-              boat.position.y = waterLevel
-              boatVelocityYRef.current = 0
-              isJumpingRef.current = false
-              actionCooldownRef.current = ACTION_COOLDOWN  // Start cooldown
-            }
-          }
-          // Apply dive physics when submerging
-          else if (isDivingRef.current) {
-            // Check if still holding dive (low frequency sound OR down arrow key)
-            const diveLoudness = frequencyData.current
-              ? getFrequencyAverage(frequencyData.current, 0, divisionBin)
-              : 0
-
-            if (diveLoudness > ACTION_THRESHOLD || isDownKeyHeldRef.current) {
-              // Dive down toward target depth
-              diveProgressRef.current = Math.min(1, diveProgressRef.current + DIVE_SPEED * dt)
-            } else {
-              // Rise back up
-              diveProgressRef.current = Math.max(0, diveProgressRef.current - DIVE_SPEED * dt)
-              if (diveProgressRef.current === 0) {
-                isDivingRef.current = false
-                // No cooldown after dive - it's a continuous hold action
-              }
-            }
-
-            // Apply dive offset to water level
-            boat.position.y = waterLevel + (DIVE_DEPTH * diveProgressRef.current)
-          }
-          // Float on water when not jumping or diving
-          else {
-            boat.position.y = waterLevel
-          }
+          // Update physics and get new Y position
+          boat.position.y = updatePhysics(physics, dt, waterLevel, isDiveHeld)
         } else {
           // Not racing - just float on water
           boat.position.y = waterLevel
