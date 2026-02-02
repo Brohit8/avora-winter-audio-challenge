@@ -153,18 +153,15 @@ export function Visualizer({
           const physics = physicsStateRef.current
 
           // Audio triggers
+          const diveLoudness = frequencyData.current
+            ? getFrequencyAverage(frequencyData.current, 0, divisionBin)
+            : 0
           if (frequencyData.current) {
-            const diveLoudness = getFrequencyAverage(frequencyData.current, 0, divisionBin)
             const jumpLoudness = getFrequencyAverage(frequencyData.current, divisionBin, MAX_SLIDER_BIN)
             checkAudioTriggers(physics, jumpLoudness, diveLoudness)
           }
 
-          // Dive hold check
-          const diveLoudness = frequencyData.current
-            ? getFrequencyAverage(frequencyData.current, 0, divisionBin)
-            : 0
           const isDiveHeld = diveLoudness > ACTION_THRESHOLD || isDownKeyHeldRef.current
-
           boat.position.y = updatePhysics(physics, dt, waterLevel, isDiveHeld)
         } else {
           boat.position.y = waterLevel
