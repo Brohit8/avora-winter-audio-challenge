@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react'
+import { useRef, useEffect, useCallback, useState } from 'react'
 import type { VisualizerProps } from './types'
 import {
   MAX_SLIDER_BIN,
@@ -8,11 +8,11 @@ import {
   GUTTER_PHASE,
   WORLD_SCROLL_SPEED,
   ACTION_THRESHOLD,
+  NOISE_THRESHOLD,
 } from './constants'
 import {
   createPhysicsState,
   resetPhysicsState,
-  checkAudioTriggers,
   updatePhysics,
   type PhysicsState,
 } from './game/physics'
@@ -29,6 +29,10 @@ import { getGerstnerDisplacement, getGerstnerNormal } from './three/gerstnerWave
 import { updateClouds } from './three/clouds'
 import { updateGameOverCamera, resetCamera } from './game/cameraAnimation'
 import { DEBUG_HITBOXES, updateBoatDebugHitbox } from './three/obstacles'
+import { AudioDebugOverlay } from './components/AudioDebugOverlay'
+
+// Debug flag for audio visualization - set to true to tune thresholds
+const DEBUG_AUDIO = false
 
 /**
  * Visualizer - Three.js boat racing game with audio controls
@@ -90,6 +94,18 @@ export function Visualizer({
   const lastFrameTimeRef = useRef<number>(0)
   const physicsStateRef = useRef<PhysicsState>(createPhysicsState())
   const animationStartTimeRef = useRef<number>(0)
+
+  // Audio tuning state (for debug overlay)
+  const [noiseThreshold, setNoiseThreshold] = useState(NOISE_THRESHOLD)
+  const [actionThreshold, setActionThreshold] = useState(ACTION_THRESHOLD)
+  const noiseThresholdRef = useRef(NOISE_THRESHOLD)
+  const actionThresholdRef = useRef(ACTION_THRESHOLD)
+
+  // Keep refs in sync with state for animation loop access
+  useEffect(() => {
+    noiseThresholdRef.current = noiseThreshold
+    actionThresholdRef.current = actionThreshold
+  }, [noiseThreshold, actionThreshold])
 
   // Keyboard controls
   const { isDownKeyHeldRef } = useKeyboardControls(screen, physicsStateRef)
@@ -154,16 +170,24 @@ export function Visualizer({
           const dt = 1 / 60
           const physics = physicsStateRef.current
 
-          // Audio triggers
+          // Audio triggers (use refs for real-time threshold adjustment)
+          const currentNoiseThreshold = noiseThresholdRef.current
+          const currentActionThreshold = actionThresholdRef.current
           const diveLoudness = frequencyData.current
-            ? getFrequencyAverage(frequencyData.current, 0, divisionBin)
+            ? getFrequencyAverage(frequencyData.current, 0, divisionBin, currentNoiseThreshold)
             : 0
           if (frequencyData.current) {
-            const jumpLoudness = getFrequencyAverage(frequencyData.current, divisionBin, MAX_SLIDER_BIN)
-            checkAudioTriggers(physics, jumpLoudness, diveLoudness)
+            const jumpLoudness = getFrequencyAverage(frequencyData.current, divisionBin, MAX_SLIDER_BIN, currentNoiseThreshold)
+            // Use custom threshold for audio triggers
+            if (jumpLoudness > currentActionThreshold && physics.actionCooldown === 0 && !physics.isJumping && !physics.isDiving) {
+              physics.isJumping = true
+              physics.velocityY = 10 // JUMP_VELOCITY
+            } else if (diveLoudness > currentActionThreshold && !physics.isJumping && !physics.isDiving) {
+              physics.isDiving = true
+            }
           }
 
-          const isDiveHeld = diveLoudness > ACTION_THRESHOLD || isDownKeyHeldRef.current
+          const isDiveHeld = diveLoudness > currentActionThreshold || isDownKeyHeldRef.current
           boat.position.y = updatePhysics(physics, dt, waterLevel, isDiveHeld)
         } else {
           boat.position.y = waterLevel
@@ -261,6 +285,18 @@ export function Visualizer({
 
       {screen === 'race' && (
         <ScoreDisplay score={score} highScore={highScore} />
+      )}
+
+      {DEBUG_AUDIO && (screen === 'race' || screen === 'setup') && (
+        <AudioDebugOverlay
+          frequencyData={frequencyData}
+          divisionBin={divisionBin}
+          noiseThreshold={noiseThreshold}
+          actionThreshold={actionThreshold}
+          maxSliderBin={MAX_SLIDER_BIN}
+          onNoiseThresholdChange={setNoiseThreshold}
+          onActionThresholdChange={setActionThreshold}
+        />
       )}
 
       {screen === 'setup' && (

@@ -6,16 +6,17 @@ import { NOISE_THRESHOLD, MAX_AUDIO_VALUE, HZ_PER_BIN } from '../constants'
 export function getFrequencyAverage(
   data: Uint8Array,
   startBin: number,
-  endBin: number
+  endBin: number,
+  noiseThreshold: number = NOISE_THRESHOLD
 ): number {
   if (startBin >= endBin) return 0
 
   let sum = 0
   for (let i = startBin; i < endBin; i++) {
-    const value = data[i] > NOISE_THRESHOLD ? data[i] - NOISE_THRESHOLD : 0
+    const value = data[i] > noiseThreshold ? data[i] - noiseThreshold : 0
     sum += value
   }
-  return sum / (endBin - startBin) / (MAX_AUDIO_VALUE - NOISE_THRESHOLD)
+  return sum / (endBin - startBin) / (MAX_AUDIO_VALUE - noiseThreshold)
 }
 
 export function getFrequencyBandLabel(hz: number): string {

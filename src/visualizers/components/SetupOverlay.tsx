@@ -66,6 +66,25 @@ const errorStyle: React.CSSProperties = {
   margin: '8px 0 0 0',
 }
 
+const testMicButtonStyle: React.CSSProperties = {
+  fontSize: 'clamp(0.875rem, 2.5vw, 1rem)',
+  fontWeight: 500,
+  padding: '8px 20px',
+  borderRadius: '6px',
+  border: '2px solid rgba(255, 255, 255, 0.5)',
+  backgroundColor: 'transparent',
+  color: '#ffffff',
+  cursor: 'pointer',
+  minHeight: '40px',
+}
+
+const micActiveStyle: React.CSSProperties = {
+  ...testMicButtonStyle,
+  border: '2px solid #22c55e',
+  color: '#22c55e',
+  cursor: 'default',
+}
+
 export function SetupOverlay({
   divisionBin,
   onDivisionChange,
@@ -73,20 +92,36 @@ export function SetupOverlay({
   onRequestMic,
 }: SetupOverlayProps) {
   const [micError, setMicError] = useState<string | null>(null)
+  const [micActive, setMicActive] = useState(false)
 
-  const handleStartClick = async () => {
+  const handleTestMic = async () => {
     setMicError(null)
     try {
       await onRequestMic()
-      onStartRace()
+      setMicActive(true)
     } catch {
-      // Mic rejected - check if mobile or desktop
-      if (isMobileDevice()) {
-        setMicError('Microphone access is required to play on mobile devices.')
-      } else {
-        // Desktop: proceed with keyboard controls
+      setMicError('Microphone access denied. Check browser permissions.')
+    }
+  }
+
+  const handleStartClick = async () => {
+    setMicError(null)
+    if (!micActive) {
+      try {
+        await onRequestMic()
+        setMicActive(true)
         onStartRace()
+      } catch {
+        // Mic rejected - check if mobile or desktop
+        if (isMobileDevice()) {
+          setMicError('Microphone access is required to play on mobile devices.')
+        } else {
+          // Desktop: proceed with keyboard controls
+          onStartRace()
+        }
       }
+    } else {
+      onStartRace()
     }
   }
 
@@ -103,6 +138,14 @@ export function SetupOverlay({
         divisionBin={divisionBin}
         onDivisionChange={onDivisionChange}
       />
+
+      {!micActive ? (
+        <button style={testMicButtonStyle} onClick={handleTestMic}>
+          Test Microphone
+        </button>
+      ) : (
+        <span style={micActiveStyle}>Mic Active</span>
+      )}
 
       <button style={buttonStyle} onClick={handleStartClick}>
         Start
