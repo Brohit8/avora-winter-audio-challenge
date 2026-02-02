@@ -8,7 +8,6 @@ import {
   BOAT_BASE_Y,
   GUTTER_Z,
   GUTTER_PHASE,
-  CAMERA_ANIMATION_DURATION,
   WORLD_SCROLL_SPEED,
   ACTION_THRESHOLD,
   SCORE_COEFFICIENT,
@@ -38,6 +37,7 @@ import { enableShadows, applySailMaterial } from './three/models'
 import { createClouds, updateClouds, type CloudSystem } from './three/clouds'
 import { loadAllAssets } from './three/AssetLoader'
 import { ObstacleManager } from './ObstacleManager'
+import { updateGameOverCamera, resetCamera } from './cameraAnimation'
 
 // =============================================================================
 // Scene Constants (not in constants.ts because they use THREE.Vector3)
@@ -45,16 +45,6 @@ import { ObstacleManager } from './ObstacleManager'
 
 const DEFAULT_CAMERA_POS = new THREE.Vector3(0, 3, 6)
 const DEFAULT_CAMERA_TARGET = new THREE.Vector3(0, 0, 0)
-
-// Reusable Vector3 objects for animation loop (avoids garbage collection)
-const _targetPos = new THREE.Vector3()
-const _targetLookAt = new THREE.Vector3()
-const _currentLookAt = new THREE.Vector3()
-
-// Ease-out cubic for smooth deceleration
-function easeOutCubic(t: number): number {
-  return 1 - Math.pow(1 - t, 3)
-}
 
 /**
  * Visualizer - Three.js boat race visualizer with game logic
@@ -440,37 +430,14 @@ export function Visualizer({
 
       // Camera pan animation during game over
       if (screen === 'gameOver_animation' && boat && camera) {
-        const animationElapsed = performance.now() - animationStartTimeRef.current
-        const progress = Math.min(animationElapsed / CAMERA_ANIMATION_DURATION, 1)
-        const easedProgress = easeOutCubic(progress)
-
-        // Target camera position: close to boat, slightly elevated, from the side
-        _targetPos.set(
-          boat.position.x + 1.5,  // Slightly ahead of boat
-          boat.position.y + 0.8,  // Above boat level
-          boat.position.z + 2.5   // From the side
+        const result = updateGameOverCamera(
+          camera,
+          boat,
+          animationStartTimeRef.current,
+          DEFAULT_CAMERA_POS,
+          DEFAULT_CAMERA_TARGET
         )
-
-        // Look at the boat
-        _targetLookAt.set(
-          boat.position.x,
-          boat.position.y + 0.2,
-          boat.position.z
-        )
-
-        // Lerp camera position
-        camera.position.lerpVectors(DEFAULT_CAMERA_POS, _targetPos, easedProgress)
-
-        // Lerp lookAt target
-        _currentLookAt.lerpVectors(
-          DEFAULT_CAMERA_TARGET,
-          _targetLookAt,
-          easedProgress
-        )
-        camera.lookAt(_currentLookAt)
-
-        // Transition to game over screen after animation completes
-        if (progress >= 1) {
+        if (result.isComplete) {
           setScreen('gameOver')
         }
       }
@@ -478,9 +445,7 @@ export function Visualizer({
       // Reset boat position and camera when in setup
       if (screen === 'setup' && boat && camera) {
         boat.position.x = BOAT_X
-        // Reset camera to default position
-        camera.position.copy(DEFAULT_CAMERA_POS)
-        camera.lookAt(DEFAULT_CAMERA_TARGET)
+        resetCamera(camera, DEFAULT_CAMERA_POS, DEFAULT_CAMERA_TARGET)
       }
 
       // Render (scene/camera/renderer are guaranteed non-null from the check above)
