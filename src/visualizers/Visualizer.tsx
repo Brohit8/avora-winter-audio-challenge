@@ -1,6 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from 'react'
 import * as THREE from 'three'
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import type { VisualizerProps, Screen, BoatColor } from './types'
 import {
   COLORS,
@@ -47,13 +46,11 @@ import {
   getDiveObstacleTypes,
   checkCollision,
   disposeObstacle,
-  setSpiralModel,
-  setMolarModel,
-  setToothbrushModel,
   type Obstacle,
   type ObstacleType,
 } from './three/obstacles'
 import { createClouds, updateClouds, type CloudSystem } from './three/clouds'
+import { loadAllAssets } from './three/AssetLoader'
 
 // =============================================================================
 // Scene Constants (not in constants.ts because they use THREE.Vector3)
@@ -290,18 +287,15 @@ export function Visualizer({
     cloudSystemRef.current = cloudSystem
 
     // === Load Models ===
-    const loader = new GLTFLoader()
-
     const sailMaterial = new THREE.MeshStandardMaterial({
       color: COLORS.red.primary,
       metalness: 0.0,
       roughness: 0.9,
     })
 
-    loader.load(
-      '/models/regatta_boat.glb',
-      (gltf) => {
-        const boat = gltf.scene.clone()
+    loadAllAssets()
+      .then(({ model: boatModel }) => {
+        const boat = boatModel.clone()
         enableShadows(boat)
         applySailMaterial(boat, sailMaterial)
         boat.position.set(BOAT_X, BOAT_BASE_Y, GUTTER_Z)
@@ -309,48 +303,10 @@ export function Visualizer({
         boat.rotation.y = Math.PI / 2
         scene.add(boat)
         boatRef.current = boat
-      },
-      undefined,
-      (error) => {
-        console.error('Error loading boat model:', error)
-      }
-    )
-
-    // Load spiral model once - cached and cloned for each obstacle
-    loader.load(
-      '/models/spiral_v3.glb',
-      (gltf) => {
-        setSpiralModel(gltf.scene)
-      },
-      undefined,
-      (error) => {
-        console.error('Error loading spiral model:', error)
-      }
-    )
-
-    // Load molar model once - cached and cloned for each obstacle
-    loader.load(
-      '/models/molar.glb',
-      (gltf) => {
-        setMolarModel(gltf.scene)
-      },
-      undefined,
-      (error) => {
-        console.error('Error loading molar model:', error)
-      }
-    )
-
-    // Load toothbrush model once - cached and cloned for each obstacle
-    loader.load(
-      '/models/toothbrush.glb',
-      (gltf) => {
-        setToothbrushModel(gltf.scene)
-      },
-      undefined,
-      (error) => {
-        console.error('Error loading toothbrush model:', error)
-      }
-    )
+      })
+      .catch((error) => {
+        console.error('Error loading models:', error)
+      })
 
     // === Wind Swirl Sprites ===
     const windSwirls = createWindSwirlSprites(5)
