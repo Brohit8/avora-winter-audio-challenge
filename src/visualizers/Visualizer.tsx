@@ -32,7 +32,7 @@ import { DEBUG_HITBOXES, updateBoatDebugHitbox } from './three/obstacles'
 import { AudioDebugOverlay } from './components/AudioDebugOverlay'
 
 // Debug flag for audio visualization - set to true to tune thresholds
-const DEBUG_AUDIO = false
+const DEBUG_AUDIO = true
 
 /**
  * Visualizer - Three.js boat racing game with audio controls

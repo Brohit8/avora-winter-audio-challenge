@@ -1,5 +1,5 @@
 // Audio Processing
-export const NOISE_THRESHOLD = 80
+export const NOISE_THRESHOLD = 20
 export const MAX_AUDIO_VALUE = 255
 export const HZ_PER_BIN = 21.5
 
@@ -25,7 +25,7 @@ export const DIVE_DEPTH = -0.6
 export const DIVE_SPEED = 8
 
 // Audio Thresholds
-export const ACTION_THRESHOLD = 0.25
+export const ACTION_THRESHOLD = 0.11
 export const ACTION_COOLDOWN = 0.3
 
 // Score
