@@ -39,15 +39,26 @@ import { loadAllAssets } from './three/AssetLoader'
 import { ObstacleManager } from './ObstacleManager'
 import { updateGameOverCamera, resetCamera } from './cameraAnimation'
 
-// =============================================================================
-// Scene Constants (not in constants.ts because they use THREE.Vector3)
-// =============================================================================
-
+// Scene constants (use THREE.Vector3, so kept separate from constants.ts)
 const DEFAULT_CAMERA_POS = new THREE.Vector3(0, 3, 6)
 const DEFAULT_CAMERA_TARGET = new THREE.Vector3(0, 0, 0)
 
 /**
- * Visualizer - Three.js boat race visualizer with game logic
+ * Visualizer - Three.js boat racing game with audio controls
+ *
+ * Audio Pipeline (handled by useAudio):
+ *   The useAudio hook captures microphone input via the Web Audio API. It creates
+ *   an AnalyserNode that performs real-time FFT (Fast Fourier Transform) analysis,
+ *   breaking the audio signal into frequency components. The data refs are updated
+ *   every frame (~60fps) via requestAnimationFrame—no React re-renders involved.
+ *
+ * Props:
+ *   - frequencyData: Ref to Uint8Array of 1024 FFT frequency bins (0-255 values).
+ *       Index 0 is the lowest frequency (DC), higher indices = higher frequencies.
+ *   - timeDomainData: Ref to Uint8Array of 2048 waveform samples (0-255 values).
+ *       Represents the raw audio signal; 128 is silence, 0/255 are extremes.
+ *   - isActive: boolean indicating if audio is streaming
+ *   - onRequestMic: callback to request microphone access
  */
 export function Visualizer({
   frequencyData,
@@ -162,26 +173,23 @@ export function Visualizer({
     setScreen('gameOver_animation')
   }, [highScore])
 
-  // Effect 1: Scene Setup (only re-runs when dimensions change)
+  // Scene setup (runs once on mount)
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
 
-    // Initialize wave time origin (must be in useEffect, not during render)
     waveTimeOriginRef.current = performance.now()
 
-    // === Scene Setup ===
+    // Scene
     const scene = new THREE.Scene()
     scene.background = new THREE.Color(0xc7e8ef)
     sceneRef.current = scene
 
-    // === Obstacle Manager ===
+    // Obstacle manager
     const obstacleManager = new ObstacleManager(scene)
     obstacleManagerRef.current = obstacleManager
 
-    // === Sand Terrain with Bumps ===
-    // Large enough that edges are outside the camera's visible area
-    // (including after win animation camera pan to x=9.25, y=1.05)
+    // Sand terrain (sized to stay within camera bounds)
     const { mesh: sand, geometry: sandGeometry, material: sandMaterial } = createSandTerrain({
       width: 150,
       depth: 120,
@@ -190,36 +198,28 @@ export function Visualizer({
     })
     scene.add(sand)
 
-    // === Camera Setup ===
+    // Camera
     const camera = new THREE.PerspectiveCamera(75, size.width / size.height, 0.1, 1000)
     camera.position.copy(DEFAULT_CAMERA_POS)
     camera.lookAt(DEFAULT_CAMERA_TARGET)
     cameraRef.current = camera
 
-    // === Renderer Setup ===
+    // Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true })
     renderer.setSize(size.width, size.height)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)) // Cap at 2 for mobile performance
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.shadowMap.enabled = true
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
     container.appendChild(renderer.domElement)
     rendererRef.current = renderer
 
-    // === Lighting ===
-    // Hemisphere light for natural ambient fill (sky to ground gradient)
-    const hemisphereLight = new THREE.HemisphereLight(
-      0xc7e8ef,  // Sky color
-      0xffeab3,  // Ground color (sand)
-      0.8
-    )
+    // Lighting
+    const hemisphereLight = new THREE.HemisphereLight(0xc7e8ef, 0xffeab3, 0.8)
     scene.add(hemisphereLight)
 
-    // Warm directional light for sun - positioned for classic 3/4 lighting
-    // (high and slightly behind camera which is at 0, 5, 10)
     const directionalLight = new THREE.DirectionalLight(0xFFF5E6, 1.3)
     directionalLight.position.set(2, 12, 15)
     directionalLight.castShadow = true
-    // Shadow camera setup - covers the race course
     directionalLight.shadow.mapSize.width = 1024
     directionalLight.shadow.mapSize.height = 1024
     directionalLight.shadow.camera.near = 1
@@ -230,18 +230,17 @@ export function Visualizer({
     directionalLight.shadow.camera.bottom = -10
     scene.add(directionalLight)
 
-    // Store sand material ref for animation updates
     sandMaterialRef.current = sandMaterial
 
-    // === Gutter (water channel) ===
+    // Water channel
     const gutter = createGutter(scene, GUTTER_Z, GUTTER_PHASE)
     waterMaterialRef.current = gutter.waterMaterial
 
-    // === Clouds (parallax background) ===
+    // Clouds
     const cloudSystem = createClouds(scene)
     cloudSystemRef.current = cloudSystem
 
-    // === Load Models ===
+    // Models
     const sailMaterial = new THREE.MeshStandardMaterial({
       color: COLORS.red.primary,
       metalness: 0.0,
@@ -263,12 +262,12 @@ export function Visualizer({
         console.error('Error loading models:', error)
       })
 
-    // === Wind Swirl Sprites ===
+    // Wind effects
     const windSwirls = createWindSwirlSprites(5)
     windSwirls.forEach(sprite => scene.add(sprite))
     windSwirlsRef.current = windSwirls
 
-    // === Resize Handling ===
+    // Resize handling
     const handleResize = () => {
       const width = window.innerWidth
       const height = window.innerHeight
@@ -279,7 +278,7 @@ export function Visualizer({
     }
     window.addEventListener('resize', handleResize)
 
-    // === Cleanup ===
+    // Cleanup
     return () => {
       window.removeEventListener('resize', handleResize)
       sandGeometry.dispose()
@@ -289,12 +288,10 @@ export function Visualizer({
 
       if (boatRef.current) scene.remove(boatRef.current)
 
-      // Cleanup wind swirls
       windSwirlsRef.current.forEach(sprite => scene.remove(sprite))
       disposeWindSwirls(windSwirlsRef.current)
       windSwirlsRef.current = []
 
-      // Cleanup clouds
       if (cloudSystemRef.current) {
         cloudSystemRef.current.clouds.forEach(c => scene.remove(c.mesh))
         cloudSystemRef.current.dispose()
@@ -313,7 +310,7 @@ export function Visualizer({
     }
   }, [])
 
-  // Effect 2: Animation Loop (re-runs when screen or ranges change, like Canvas 2D)
+  // Animation loop
   useEffect(() => {
     const scene = sceneRef.current
     const camera = cameraRef.current
@@ -326,62 +323,54 @@ export function Visualizer({
       const boat = boatRef.current
       const waterMat = waterMaterialRef.current
 
-      // Use stable time reference for wave animation (prevents snapping on state changes)
+      // Elapsed time for wave animation
       const elapsed = (performance.now() - waveTimeOriginRef.current) / 1000
       if (waterMat) waterMat.uniforms.uTime.value = elapsed
 
-      // Update sand texture scroll based on world offset (creates movement illusion)
-      // Sand mesh is 150 units wide, UV spans 0-1, so 1/150 = 0.00667 per world unit
+      // Sand scroll for movement illusion
       const sandMat = sandMaterialRef.current
       if (sandMat) sandMat.uniforms.uOffset.value = worldOffsetRef.current / 150
 
-      // Update cloud parallax (slower than world speed for depth)
+      // Cloud parallax
       const clouds = cloudSystemRef.current
       if (clouds) updateClouds(clouds, worldOffsetRef.current)
 
-      // Apply boat rocking synced to Gerstner waves
+      // Boat wave rocking
       if (boat) {
-        // Get Gerstner displacement at boat position
         const disp = getGerstnerDisplacement(boat.position.x, GUTTER_Z, elapsed, GUTTER_PHASE)
         const normal = getGerstnerNormal(boat.position.x, GUTTER_Z, elapsed, GUTTER_PHASE)
-
-        // Water surface level (base + wave displacement)
         const waterLevel = BOAT_BASE_Y + disp.dy
 
-        // Jump/Dive physics (only during race)
+        // Physics (race only)
         if (screen === 'race') {
-          const dt = 1 / 60  // Approximate frame time
+          const dt = 1 / 60
           const physics = physicsStateRef.current
 
-          // Check for audio-triggered actions
+          // Audio triggers
           if (frequencyData.current) {
             const diveLoudness = getFrequencyAverage(frequencyData.current, 0, divisionBin)
             const jumpLoudness = getFrequencyAverage(frequencyData.current, divisionBin, MAX_SLIDER_BIN)
             checkAudioTriggers(physics, jumpLoudness, diveLoudness)
           }
 
-          // Check if dive should be held (audio or keyboard)
+          // Dive hold check
           const diveLoudness = frequencyData.current
             ? getFrequencyAverage(frequencyData.current, 0, divisionBin)
             : 0
           const isDiveHeld = diveLoudness > ACTION_THRESHOLD || isDownKeyHeldRef.current
 
-          // Update physics and get new Y position
           boat.position.y = updatePhysics(physics, dt, waterLevel, isDiveHeld)
         } else {
-          // Not racing - just float on water
           boat.position.y = waterLevel
         }
 
-        // Derive rotation from surface normal
-        // Normal tilted in X → roll (rotation.z), Normal tilted in Z → pitch (rotation.x)
-        boat.rotation.z = Math.asin(-normal.nx) * 0.6   // Roll
-        boat.rotation.x = Math.asin(normal.nz) * 0.5    // Pitch
+        // Rotation from wave normal
+        boat.rotation.z = Math.asin(-normal.nx) * 0.6
+        boat.rotation.x = Math.asin(normal.nz) * 0.5
       }
 
-      // During race, update world offset at constant rate
+      // Race logic
       if (screen === 'race') {
-        // Calculate delta time
         const currentTime = performance.now()
         if (lastFrameTimeRef.current === 0) {
           lastFrameTimeRef.current = currentTime
@@ -389,29 +378,25 @@ export function Visualizer({
         const deltaTime = (currentTime - lastFrameTimeRef.current) / 1000
         lastFrameTimeRef.current = currentTime
 
-        // Increment world offset (for obstacle positioning and score)
         worldOffsetRef.current += WORLD_SCROLL_SPEED * deltaTime
-
-        // Update score based on distance traveled
         setScore(Math.floor(worldOffsetRef.current * SCORE_COEFFICIENT))
 
-        // Obstacle management
+        // Obstacles
         const worldOffset = worldOffsetRef.current
         const obstacleManager = obstacleManagerRef.current
         if (obstacleManager) {
           obstacleManager.trySpawn(worldOffset)
           obstacleManager.updateAll(worldOffset, elapsed)
 
-          // Check collision with obstacles
           if (boat && obstacleManager.checkBoatCollision(boat.position.x, boat.position.y)) {
             handleGameOver()
-            return // Stop animation loop
+            return
           }
 
           obstacleManager.removeOffScreen(worldOffset)
         }
 
-        // Update wind swirls (positioned relative to boat)
+        // Wind effects
         if (frequencyData.current && boat) {
           const speed = getFrequencyAverage(frequencyData.current, divisionBin, MAX_SLIDER_BIN)
           updateWindSwirls(
@@ -424,11 +409,10 @@ export function Visualizer({
           )
         }
       } else {
-        // Hide wind swirls when not racing
         windSwirlsRef.current.forEach(sprite => sprite.visible = false)
       }
 
-      // Camera pan animation during game over
+      // Game over camera animation
       if (screen === 'gameOver_animation' && boat && camera) {
         const result = updateGameOverCamera(
           camera,
@@ -442,13 +426,12 @@ export function Visualizer({
         }
       }
 
-      // Reset boat position and camera when in setup
+      // Setup state reset
       if (screen === 'setup' && boat && camera) {
         boat.position.x = BOAT_X
         resetCamera(camera, DEFAULT_CAMERA_POS, DEFAULT_CAMERA_TARGET)
       }
 
-      // Render (scene/camera/renderer are guaranteed non-null from the check above)
       renderer!.render(scene!, camera!)
       frameId = requestAnimationFrame(animate)
     }
