@@ -1,8 +1,6 @@
-import { useRef, useEffect, useState, useCallback } from 'react'
-import * as THREE from 'three'
+import { useRef, useEffect, useCallback } from 'react'
 import type { VisualizerProps } from './types'
 import {
-  COLORS,
   MAX_SLIDER_BIN,
   BOAT_X,
   BOAT_BASE_Y,
@@ -20,24 +18,16 @@ import {
 } from './game/physics'
 import { useKeyboardControls } from './hooks/useKeyboardControls'
 import { useGameState } from './hooks/useGameState'
+import { useThreeScene, DEFAULT_CAMERA_POS, DEFAULT_CAMERA_TARGET } from './hooks/useThreeScene'
 import { getFrequencyAverage } from './utils/audio'
 import { SetupOverlay } from './components/SetupOverlay'
 import { ScoreDisplay } from './components/ScoreDisplay'
 import { GameOverOverlay } from './components/GameOverOverlay'
 import { CountdownOverlay } from './components/CountdownOverlay'
-import { createWindSwirlSprites, updateWindSwirls, disposeWindSwirls } from './three/windSwirls'
-import { createSandTerrain } from './three/sandTerrain'
+import { updateWindSwirls } from './three/windSwirls'
 import { getGerstnerDisplacement, getGerstnerNormal } from './three/gerstnerWaves'
-import { createGutter } from './three/gutter'
-import { enableShadows, applySailMaterial } from './three/models'
-import { createClouds, updateClouds, type CloudSystem } from './three/clouds'
-import { loadAllAssets } from './three/AssetLoader'
-import { ObstacleManager } from './game/ObstacleManager'
+import { updateClouds } from './three/clouds'
 import { updateGameOverCamera, resetCamera } from './game/cameraAnimation'
-
-// Scene constants (use THREE.Vector3, so kept separate from constants.ts)
-const DEFAULT_CAMERA_POS = new THREE.Vector3(0, 3, 6)
-const DEFAULT_CAMERA_TARGET = new THREE.Vector3(0, 0, 0)
 
 /**
  * Visualizer - Three.js boat racing game with audio controls
@@ -64,9 +54,6 @@ export function Visualizer({
 }: VisualizerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Responsive sizing
-  const [size, setSize] = useState({ width: window.innerWidth, height: window.innerHeight })
-
   // Game state
   const {
     screen,
@@ -82,21 +69,25 @@ export function Visualizer({
     updateScore,
   } = useGameState()
 
-  // Three.js object refs (shared between effects)
-  const sceneRef = useRef<THREE.Scene | null>(null)
-  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null)
-  const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
-  const boatRef = useRef<THREE.Group | null>(null)
-  const waterMaterialRef = useRef<THREE.ShaderMaterial | null>(null)
-  const sandMaterialRef = useRef<THREE.ShaderMaterial | null>(null)
-  const windSwirlsRef = useRef<THREE.Sprite[]>([])
-  const waveTimeOriginRef = useRef<number>(0)
+  // Three.js scene
+  const {
+    sceneRef,
+    cameraRef,
+    rendererRef,
+    boatRef,
+    waterMaterialRef,
+    sandMaterialRef,
+    windSwirlsRef,
+    cloudSystemRef,
+    obstacleManagerRef,
+    waveTimeOriginRef,
+  } = useThreeScene(containerRef)
+
+  // Game-specific refs
   const worldOffsetRef = useRef<number>(0)
   const lastFrameTimeRef = useRef<number>(0)
   const physicsStateRef = useRef<PhysicsState>(createPhysicsState())
-  const obstacleManagerRef = useRef<ObstacleManager | null>(null)
   const animationStartTimeRef = useRef<number>(0)
-  const cloudSystemRef = useRef<CloudSystem | null>(null)
 
   // Keyboard controls
   const { isDownKeyHeldRef } = useKeyboardControls(screen, physicsStateRef)
@@ -124,143 +115,6 @@ export function Visualizer({
     triggerGameOver(worldOffsetRef.current)
     animationStartTimeRef.current = performance.now()
   }, [triggerGameOver])
-
-  // Scene setup (runs once on mount)
-  useEffect(() => {
-    const container = containerRef.current
-    if (!container) return
-
-    waveTimeOriginRef.current = performance.now()
-
-    // Scene
-    const scene = new THREE.Scene()
-    scene.background = new THREE.Color(0xc7e8ef)
-    sceneRef.current = scene
-
-    // Obstacle manager
-    const obstacleManager = new ObstacleManager(scene)
-    obstacleManagerRef.current = obstacleManager
-
-    // Sand terrain (sized to stay within camera bounds)
-    const { mesh: sand, geometry: sandGeometry, material: sandMaterial } = createSandTerrain({
-      width: 150,
-      depth: 120,
-      segmentsX: 150,
-      segmentsZ: 120,
-    })
-    scene.add(sand)
-
-    // Camera
-    const camera = new THREE.PerspectiveCamera(75, size.width / size.height, 0.1, 1000)
-    camera.position.copy(DEFAULT_CAMERA_POS)
-    camera.lookAt(DEFAULT_CAMERA_TARGET)
-    cameraRef.current = camera
-
-    // Renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true })
-    renderer.setSize(size.width, size.height)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    renderer.shadowMap.enabled = true
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap
-    container.appendChild(renderer.domElement)
-    rendererRef.current = renderer
-
-    // Lighting
-    const hemisphereLight = new THREE.HemisphereLight(0xc7e8ef, 0xffeab3, 0.8)
-    scene.add(hemisphereLight)
-
-    const directionalLight = new THREE.DirectionalLight(0xFFF5E6, 1.3)
-    directionalLight.position.set(2, 12, 15)
-    directionalLight.castShadow = true
-    directionalLight.shadow.mapSize.width = 1024
-    directionalLight.shadow.mapSize.height = 1024
-    directionalLight.shadow.camera.near = 1
-    directionalLight.shadow.camera.far = 30
-    directionalLight.shadow.camera.left = -10
-    directionalLight.shadow.camera.right = 10
-    directionalLight.shadow.camera.top = 10
-    directionalLight.shadow.camera.bottom = -10
-    scene.add(directionalLight)
-
-    sandMaterialRef.current = sandMaterial
-
-    // Water channel
-    const gutter = createGutter(scene, GUTTER_Z, GUTTER_PHASE)
-    waterMaterialRef.current = gutter.waterMaterial
-
-    // Clouds
-    const cloudSystem = createClouds(scene)
-    cloudSystemRef.current = cloudSystem
-
-    // Models
-    const sailMaterial = new THREE.MeshStandardMaterial({
-      color: COLORS.red.primary,
-      metalness: 0.0,
-      roughness: 0.9,
-    })
-
-    loadAllAssets()
-      .then(({ model: boatModel }) => {
-        const boat = boatModel.clone()
-        enableShadows(boat)
-        applySailMaterial(boat, sailMaterial)
-        boat.position.set(BOAT_X, BOAT_BASE_Y, GUTTER_Z)
-        boat.scale.set(0.35, 0.35, 0.35)
-        boat.rotation.y = Math.PI / 2
-        scene.add(boat)
-        boatRef.current = boat
-      })
-      .catch((error) => {
-        console.error('Error loading models:', error)
-      })
-
-    // Wind effects
-    const windSwirls = createWindSwirlSprites(5)
-    windSwirls.forEach(sprite => scene.add(sprite))
-    windSwirlsRef.current = windSwirls
-
-    // Resize handling
-    const handleResize = () => {
-      const width = window.innerWidth
-      const height = window.innerHeight
-      camera.aspect = width / height
-      camera.updateProjectionMatrix()
-      renderer.setSize(width, height)
-      setSize({ width, height })
-    }
-    window.addEventListener('resize', handleResize)
-
-    // Cleanup
-    return () => {
-      window.removeEventListener('resize', handleResize)
-      sandGeometry.dispose()
-      sandMaterial.dispose()
-      gutter.dispose()
-      sailMaterial.dispose()
-
-      if (boatRef.current) scene.remove(boatRef.current)
-
-      windSwirlsRef.current.forEach(sprite => scene.remove(sprite))
-      disposeWindSwirls(windSwirlsRef.current)
-      windSwirlsRef.current = []
-
-      if (cloudSystemRef.current) {
-        cloudSystemRef.current.clouds.forEach(c => scene.remove(c.mesh))
-        cloudSystemRef.current.dispose()
-      }
-
-      renderer.dispose()
-      container.removeChild(renderer.domElement)
-
-      sceneRef.current = null
-      cameraRef.current = null
-      rendererRef.current = null
-      boatRef.current = null
-      waterMaterialRef.current = null
-      sandMaterialRef.current = null
-      cloudSystemRef.current = null
-    }
-  }, [])
 
   // Animation loop
   useEffect(() => {
