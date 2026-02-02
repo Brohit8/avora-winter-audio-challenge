@@ -4,6 +4,7 @@ import type { FrequencyRange, BoatColor } from '../types'
 import { MAX_SLIDER_BIN, COLORS } from '../constants'
 import { getFrequencyBandLabel, binToHz } from '../utils/audio'
 
+// Dual-thumb range slider for selecting a frequency band
 interface FrequencySliderProps {
   color: BoatColor
   label: string

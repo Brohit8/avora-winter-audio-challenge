@@ -86,6 +86,7 @@ export const waterFragmentShader = `
 
 // CPU-side wave calculations (mirrors shader for object positioning)
 
+// Calculate wave displacement at a point for positioning boats/obstacles
 export function getGerstnerDisplacement(
   x: number,
   z: number,
@@ -107,6 +108,7 @@ export function getGerstnerDisplacement(
   return { dx, dy, dz }
 }
 
+// Calculate surface normal at a point for tilting boats/obstacles with waves
 export function getGerstnerNormal(
   x: number,
   z: number,

@@ -169,6 +169,7 @@ export function createObstacleMesh(type: ObstacleType): THREE.Mesh | THREE.Group
   }
 }
 
+// Create a new obstacle instance at the given world position
 export function createObstacle(type: ObstacleType, worldX: number): Obstacle {
   const mesh = createObstacleMesh(type)
   const config = OBSTACLE_CONFIGS[type]
@@ -181,6 +182,7 @@ export function createObstacle(type: ObstacleType, worldX: number): Obstacle {
   }
 }
 
+// Update obstacle position, syncing with wave motion if it floats
 export function updateObstacle(
   obstacle: Obstacle,
   worldOffset: number,

@@ -44,6 +44,7 @@ export class ObstacleManager {
     this.obstacleHistory = []
   }
 
+  // Spawn a new obstacle if enough distance has passed since the last one
   trySpawn(worldOffset: number): void {
     const timeSinceStart = worldOffset / WORLD_SCROLL_SPEED
 
@@ -94,6 +95,7 @@ export class ObstacleManager {
     })
   }
 
+  // Returns true if the boat collides with any active obstacle
   checkBoatCollision(boatX: number, boatY: number): boolean {
     for (const obstacle of this.obstacles) {
       if (checkCollision(boatX, boatY, BOAT_HITBOX_WIDTH, BOAT_HITBOX_HEIGHT, obstacle)) {
@@ -103,6 +105,7 @@ export class ObstacleManager {
     return false
   }
 
+  // Clean up obstacles that have scrolled past the left edge
   removeOffScreen(worldOffset: number): void {
     const toRemove = this.obstacles.filter(obs => isObstacleOffScreen(obs, worldOffset))
     toRemove.forEach(obs => {
