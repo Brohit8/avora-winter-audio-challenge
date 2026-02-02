@@ -20,15 +20,15 @@ export function getFrequencyAverage(
 }
 
 /**
- * Convert Hz to standard audio production frequency band name.
+ * Convert Hz to simple pitch label.
  */
 export function getFrequencyBandLabel(hz: number): string {
-  if (hz < 60) return 'Sub-Bass'
-  if (hz < 250) return 'Bass'
-  if (hz < 500) return 'Low Mids'
-  if (hz < 2000) return 'Midrange'
-  if (hz < 4000) return 'Upper Mids'
-  return 'Presence'
+  if (hz < 60) return 'Very Low'
+  if (hz < 250) return 'Low'
+  if (hz < 500) return 'Low-Mid'
+  if (hz < 2000) return 'Mid'
+  if (hz < 4000) return 'High'
+  return 'Very High'
 }
 
 /**

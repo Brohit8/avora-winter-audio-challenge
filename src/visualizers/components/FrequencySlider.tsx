@@ -55,13 +55,17 @@ export function FrequencySlider({
     }
   }
 
+  const startBand = getFrequencyBandLabel(binToHz(range.start))
+  const endBand = getFrequencyBandLabel(binToHz(range.end))
+  const rangeLabel = startBand === endBand ? startBand : `${startBand} → ${endBand}`
+
   return (
     <div style={{ color: colors.primary, textAlign: 'center', width: '320px' }}>
-      <div style={{ marginBottom: '8px', fontFamily: 'monospace', fontSize: '14px' }}>
-        {label}: {binToHz(range.start)} - {binToHz(range.end)} Hz
+      <div style={{ marginBottom: '4px', fontSize: '16px', fontWeight: 600 }}>
+        {label}
       </div>
-      <div style={{ marginBottom: '8px', fontSize: '12px', color: colors.secondary }}>
-        ({getFrequencyBandLabel(binToHz(range.start))} - {getFrequencyBandLabel(binToHz(range.end))})
+      <div style={{ marginBottom: '8px', fontSize: '14px' }}>
+        {rangeLabel}
       </div>
       <Slider.Root
         min={0}
