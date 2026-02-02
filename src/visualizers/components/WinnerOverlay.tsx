@@ -19,6 +19,20 @@ const overlayStyle: React.CSSProperties = {
   gap: '16px',
 }
 
+const buttonStyle: React.CSSProperties = {
+  fontSize: 'clamp(1rem, 3vw, 1.25rem)',
+  fontWeight: 600,
+  padding: '12px 32px',
+  borderRadius: '8px',
+  border: 'none',
+  backgroundColor: '#ffffff',
+  color: '#000000',
+  cursor: 'pointer',
+  marginTop: '8px',
+  minHeight: '48px',
+  minWidth: '160px',
+}
+
 export function WinnerOverlay({ winner, onRaceAgain }: WinnerOverlayProps) {
   return (
     <div style={overlayStyle}>
@@ -29,7 +43,7 @@ export function WinnerOverlay({ winner, onRaceAgain }: WinnerOverlayProps) {
       }}>
         {winner === 'red' ? 'Red' : 'Blue'} Wins!
       </h2>
-      <button onClick={onRaceAgain}>
+      <button style={buttonStyle} onClick={onRaceAgain}>
         Race Again
       </button>
     </div>
