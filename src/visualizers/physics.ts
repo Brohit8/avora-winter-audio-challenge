@@ -14,6 +14,7 @@ export interface PhysicsState {
   isDiving: boolean
   diveProgress: number
   actionCooldown: number
+  jumpHeight: number
 }
 
 export function createPhysicsState(): PhysicsState {
@@ -23,6 +24,7 @@ export function createPhysicsState(): PhysicsState {
     isDiving: false,
     diveProgress: 0,
     actionCooldown: 0,
+    jumpHeight: 0,
   }
 }
 
@@ -32,6 +34,7 @@ export function resetPhysicsState(state: PhysicsState): void {
   state.isDiving = false
   state.diveProgress = 0
   state.actionCooldown = 0
+  state.jumpHeight = 0
 }
 
 export function triggerJump(state: PhysicsState): boolean {
@@ -78,17 +81,18 @@ export function updatePhysics(
 
   // Jump
   if (state.isJumping) {
+    state.jumpHeight += state.velocityY * dt
     state.velocityY -= GRAVITY * dt
-    const newY = waterLevel + state.velocityY * dt
 
-    if (newY <= waterLevel) {
+    if (state.jumpHeight <= 0) {
+      state.jumpHeight = 0
       state.velocityY = 0
       state.isJumping = false
       state.actionCooldown = ACTION_COOLDOWN
       return waterLevel
     }
 
-    return newY
+    return waterLevel + state.jumpHeight
   }
 
   // Dive
