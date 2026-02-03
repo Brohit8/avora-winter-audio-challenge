@@ -28,7 +28,7 @@ export function FrequencyDivisionSlider({
         fontWeight: 600,
       }}>
         <span style={{ color: COLORS.blue.primary }}>
-          Dive
+          Duck
         </span>
         <span style={{ color: COLORS.red.primary }}>
           Jump
@@ -62,7 +62,7 @@ export function FrequencyDivisionSlider({
           overflow: 'hidden',
           display: 'flex',
         }}>
-          {/* Dive zone (blue) */}
+          {/* Duck zone (blue) */}
           <div style={{
             width: `${divisionPercent}%`,
             height: '100%',
