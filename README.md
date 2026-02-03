@@ -38,14 +38,16 @@ You SHOULD NOT update useAudio, and should instead focus on using its return val
 
 ```
 src/
-├── audio/
-│   └── useAudio.ts      # Audio pipeline (do not modify)
+├── audio/useAudio.ts     # Mic input & FFT analysis
 ├── visualizers/
-│   └── Visualizer.tsx   # YOUR CODE GOES HERE
-├── App.tsx
-├── App.css
-├── index.css
-└── main.tsx
+│   ├── Visualizer.tsx    # Main race component
+│   ├── constants.ts      # Tuning values (speed, frequencies)
+│   ├── components/       # React UI overlays (setup, countdown, winner)
+│   ├── three/            # 3D rendering (waves, gutters, terrain)
+│   └── utils/            # Audio helpers
+└── App.tsx
+
+public/models/            # 3D assets (boats, buoys)
 ```
 
 ## Submissions
