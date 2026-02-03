@@ -169,6 +169,7 @@ export function useAudio({ analyser, audio }: UseAudioOptions = {}): UseAudioRet
         setError('Unknown error occurred')
       }
       setIsActive(false)
+      throw err  // Re-throw so callers can handle it
     }
   }, [analyser, audio, stop])
 
