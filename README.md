@@ -2,6 +2,8 @@
 
 Create your own novel audio visualization using real-time microphone input.
 
+**[Play Live Demo](https://avora-regatta.vercel.app/)**
+
 ## Rohit's Visualization: Sonic Raingutter Regatta
 
 Summary: A real-time audio visualizer where two boats race down parallel rain gutters. Each boat is mapped to a frequency range. When the microphone detects sound in a particular boat's range, it generates "wind" that propels the respective boat forward. The louder the signal, the faster the boat. The first boat to cross the finish line wins.
