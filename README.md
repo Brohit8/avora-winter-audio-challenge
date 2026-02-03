@@ -1,5 +1,7 @@
 # Avora Winter Audio Challenge 2026
 
+**[Play Live Demo](https://avora-surf.vercel.app/)**
+
 Create your own novel audio visualization using real-time microphone input.
 
 ## Rohit's Visualization #2: Sonic Surf
